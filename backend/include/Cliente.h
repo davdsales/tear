@@ -6,13 +6,15 @@ using namespace std;
 
 class Cliente {
     private:
+        int id;
         string nome;
         string contato;
     public:
-        //constutor
-        Cliente(string nome = "", string contato = "")
-        : nome(nome), contato(contato) {}
+        // construtor
+        Cliente(int id = 0,string nome = "", string contato = "")
+        : id(id), nome(nome), contato(contato) {}
         // get
+        int getId() const { return id; }
         string getNome() const { return nome; }
         string getContato() const { return contato; }
         // set
