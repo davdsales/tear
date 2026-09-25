@@ -1,9 +1,10 @@
 // David
 #ifndef _ORCAMENTO_H_
 #define _ORCAMENTO_H_
+
 #include <string>
+#include <algorithm> // necessario para std::max
 #include "Cliente.h"
-using namespace std;
 
 class Orcamento {
     private:
@@ -14,13 +15,22 @@ class Orcamento {
         double custoAdicionais;
         double margemLucroDesejada;
         double desconto;
-    public:
-        //constutor
-        Orcamento(int id = 0, const Cliente& cliente = Cliente(), double custoMateriais = 0.0, double custoMaoDeObra = 0.0, double custoAdicionais = 0.0, double margemLucroDesejada = 0.0, double desconto = 0.0)
-        : id(id), cliente(cliente), custoMateriais(custoMateriais), custoMaoDeObra(custoMaoDeObra), custoAdicionais(custoAdicionais), margemLucroDesejada(margemLucroDesejada), desconto(desconto) {}
 
-        // get
-        int getId() const { return id;}
+    public:
+        // construtor usando os setters para garantir a validacao de dados logo na criação
+        Orcamento(int id = 0, const Cliente& cliente = Cliente(), double custoMateriais = 0.0, 
+                  double custoMaoDeObra = 0.0, double custoAdicionais = 0.0, 
+                  double margemLucroDesejada = 0.0, double desconto = 0.0)
+            : id(id), cliente(cliente) {
+            setCustoMateriais(custoMateriais);
+            setCustoMaoDeObra(custoMaoDeObra);
+            setCustoAdicionais(custoAdicionais);
+            setMargemLucroDesejada(margemLucroDesejada);
+            setDesconto(desconto);
+        }
+
+        // getters
+        int getId() const { return id; }
         const Cliente& getCliente() const { return cliente; }
         double getCustoMateriais() const { return custoMateriais; }
         double getCustoMaoDeObra() const { return custoMaoDeObra; }
@@ -28,31 +38,34 @@ class Orcamento {
         double getMargemLucroDesejada() const { return margemLucroDesejada; }
         double getDesconto() const { return desconto; }
 
-        //set
-        void setCustoMateriais(double novoCustoMateriais) { custoMateriais = novoCustoMateriais; }
-        void setCustoMaoDeObra(double novoCustoMaoDeObra) { custoMaoDeObra = novoCustoMaoDeObra; }
-        void setCustoAdicionais(double novoCustoAdicionais) { custoAdicionais = novoCustoAdicionais; }
-        void setMargemLucroDesejada(double novaMargemLucroDesejada) { margemLucroDesejada = novaMargemLucroDesejada; }
-        void setDesconto(double novoDesconto) { desconto = novoDesconto; }
+        // setters protegidos para não aceitarem valores abaixo de 0
+        void setCustoMateriais(double valor) { custoMateriais = std::max(0.0, valor); }
+        void setCustoMaoDeObra(double valor) { custoMaoDeObra = std::max(0.0, valor); }
+        void setCustoAdicionais(double valor) { custoAdicionais = std::max(0.0, valor); }
+        void setMargemLucroDesejada(double valor) { margemLucroDesejada = std::max(0.0, valor); }
+        void setDesconto(double valor) { desconto = std::max(0.0, valor); }
 
-        // cálculo de custo total 
+        // cálculos
         double calcularCustoTotal() const {
             return custoMateriais + custoMaoDeObra + custoAdicionais;
         }
-        // cálculo de preço bruto (antes do desconto)
+
         double calcularPrecoBruto() const {
             return calcularCustoTotal() * (1.0 + margemLucroDesejada);
         }
-        // cálculo preço final (após o desconto)
+
         double calcularPrecoFinal() const {
-            return calcularPrecoBruto() - desconto;
+            double precoFinal = calcularPrecoBruto() - desconto;
+            // previne preco final negativo caso o desconto seja maior que o total
+            return std::max(0.0, precoFinal);
         }
-        // cálculo de margem percentual
+
         double calcularMargemPercentual() const {
             double precoFinal = calcularPrecoFinal();
-            if (precoFinal == 0.0) return 0.0; //evita divisão por 0
+            if (precoFinal == 0.0) return 0.0; // evita divisão por zero
+            
             double lucroEfetivo = precoFinal - calcularCustoTotal();
-            return (lucroEfetivo /precoFinal) * 100.0;
+            return (lucroEfetivo / precoFinal) * 100.0;
         }
 };
 
