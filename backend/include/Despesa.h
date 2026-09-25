@@ -18,6 +18,9 @@ class Despesa : public transacao {
         string getTipo() const override{
             return "Despesa";
         }
+        string getCategoria() const {
+            return categoria;
+}
 };
 
 #endif

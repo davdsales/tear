@@ -7,7 +7,7 @@ using namespace std;
 
 class Receita : public transacao{
     private:
-        string origem;
+        string origem; // venda, encomenda, serviço..
     public:
         Receita(int id, string descricao, double valor, string data, string origem ) : transacao(id, descricao, valor, data), origem(origem){
 
@@ -18,6 +18,9 @@ class Receita : public transacao{
         string getTipo() const override{
             return "Receita";
         }
+        string getOrigem() const {
+            return origem;
+}
 
 };    
 
