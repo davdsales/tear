@@ -1,24 +1,31 @@
-import './Sidebar.css'
+import React from 'react';
 
+// componente da barra lateral de navegacao do sistema
 function Sidebar() {
-  return (
-    <aside className="sidebar">
-      <h2>Tear</h2>
+  // altera a hash da url para navegar entre as telas
+  const navegar = (hash) => {
+    window.location.hash = hash;
+  };
 
-      <nav>
-        <a href="#Inicio">Início</a>
-        <a href="#Estoque">Estoque</a>
-        <a href="#Compras">Compras</a>
-        <a href="#Projetos">Projetos</a>
-        <a href="#Projetos">Projetos</a>
-        <a href="#Produção">Produção</a>
-        <a href="#Pedidos">Pedidos</a>
-        <a href="#Financeiro">Financeiro</a>
+  return (
+    <aside style={{ width: '220px', background: '#FFF', padding: '20px', borderRight: '1px solid #EEE' }}>
+      <h2 style={{ marginBottom: '30px' }}>Tear</h2>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <button 
+          onClick={() => navegar('#Inicio')}
+          style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          Início
+        </button>
+        <button 
+          onClick={() => navegar('#Pedidos')}
+          style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          Pedidos
+        </button>
       </nav>
     </aside>
-  )
-
-  
+  );
 }
 
-export default Sidebar
+export default Sidebar;
