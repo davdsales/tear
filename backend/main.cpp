@@ -1,150 +1,122 @@
+#include "httplib.h"
+#include "nlohmann/json.hpp"
 #include <iostream>
-#include <limits>
-#include <algorithm>
-#include <clocale>
-#include <windows.h>
-#include <iomanip>
+#include <vector>
+
+#include "Cliente.h"
+#include "Orcamento.h"
 #include "GerenciadorOrcamentos.h"
+#include "Pedido.h"
 
-using namespace std;
+using json = nlohmann::json;
 
-const string NOME_ARQUIVO = "orcamentos.txt";
+// instancias globais para gerenciar os orcamentos e a lista de pedidos
+GerenciadorOrcamentos gerenciadorOrcamentos;
+std::vector<Pedido> listaPedidos;
+int proximoIdPedido = 1;
 
-// limpa o buffer caso o usuário digite letras onde deveria ser número
-void limparBuffer() {
-    cin.clear();
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-}
+// funcao que carrega os dados do arquivo txt ou cria os orcamentos padrao
+void carregarDadosIniciais() {
+    gerenciadorOrcamentos.carregarDeArquivo("orcamentos.txt");
 
-// remove caracteres ';' das strings para não quebrar a estrutura do arquivo .txt
-string removePVEntrada(string texto) {
-    texto.erase(remove(texto.begin(), texto.end(), ';'), texto.end());
-    return texto;
-}
+    if (gerenciadorOrcamentos.getTodosOrcamentos().empty()) {
+        Cliente c1(1, "Maria Clara", "81999998888");
+        Cliente c2(2, "João Pedro", "81988887777");
 
-// função auxiliar para garantir a leitura segura de valores monetários/numéricos
-double lerDoubleValido(const string& mensagem) {
-    double valor;
-    while (true) {
-        cout << mensagem;
-        if (cin >> valor && valor >= 0.0) {
-            return valor;
+        gerenciadorOrcamentos.adicionarOrcamento(c1, 50.0, 40.0, 10.0, 0.20, 0.0);
+        gerenciadorOrcamentos.adicionarOrcamento(c2, 100.0, 80.0, 20.0, 0.25, 0.0);
+
+        gerenciadorOrcamentos.salvarEmArquivo("orcamentos.txt");
+    }
+
+    const auto& orcamentos = gerenciadorOrcamentos.getTodosOrcamentos();
+    if (!orcamentos.empty() && listaPedidos.empty()) {
+        listaPedidos.push_back(Pedido(proximoIdPedido++, orcamentos[0], StatusPedido::EM_ABERTO, "2026-09-26"));
+        if (orcamentos.size() > 1) {
+            listaPedidos.push_back(Pedido(proximoIdPedido++, orcamentos[1], StatusPedido::EM_PRODUCAO, "2026-09-26"));
         }
-        cout << "Entrada inválida! Digite um número positivo válido.\n";
-        limparBuffer();
     }
 }
 
 int main() {
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
+    carregarDadosIniciais();
 
-    GerenciadorOrcamentos gerenciador;
-    
-    // leitura automática dos dados
-    gerenciador.carregarDeArquivo(NOME_ARQUIVO);
+    httplib::Server svr;
 
-    int opcao = -1;
+    // rota get para listar os pedidos em formato json para o kanban
+    svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
-    while (opcao != 0) {
-        cout << "\n======== Sistema de gestão de orçamentos ========\n";
-        cout << "1. Cadastrar novo orçamento\n";
-        cout << "2. Listar todos os orçamentos\n";
-        cout << "3. Buscar orçamento por id\n";
-        cout << "4. Remover orçamento\n";
-        cout << "0. Salvar e sair\n";
-        cout << "Escolha uma opção: ";
-        cin >> opcao;
+        json listaJson = json::array();
 
-        if (cin.fail()) {
-            limparBuffer();
-            cout << "Opção inválida! Digite apenas números.\n";
-            continue;
+        for (const auto& pedido : listaPedidos) {
+            const auto& orcamento = pedido.getOrcamento();
+            const auto& cliente = orcamento.getCliente();
+
+            listaJson.push_back({
+                {"id", pedido.getId()},
+                {"cliente", cliente.getNome()},
+                {"contato", cliente.getContato()},
+                {"descricao", "Orçamento #" + std::to_string(orcamento.getId())},
+                {"valor", orcamento.calcularPrecoFinal()},
+                {"status", pedido.getStatusTexto()},
+                {"dataCriacao", pedido.getDataCriacao()}
+            });
         }
 
-        switch (opcao) {
-            case 1: {
-                string nome, contato;
+        res.set_content(listaJson.dump(), "application/json");
+    });
 
-                limparBuffer();
-                cout << "\n--- Cadastro de orçamento ---\n";
-                cout << "Nome do cliente: ";
-                getline(cin, nome);
-                cout << "Contato (telefone/e-mail): ";
-                getline(cin, contato);
+    // rota post para receber os dados do react e criar novo orcamento e pedido
+    svr.Post("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
-                // remove ";" da entrada, caso tenha
-                nome = removePVEntrada(nome); // PV = ponto e vírgula
-                contato = removePVEntrada(contato);
+        try {
+            auto body = json::parse(req.body);
 
-                double mat = lerDoubleValido("Custo de materiais (R$): ");
-                double mao = lerDoubleValido("Custo de mão de obra (R$): ");
-                double adic = lerDoubleValido("Custos adicionais (R$): ");
-                double margem = lerDoubleValido("Margem de lucro desejada (ex: 0.20 para 20%): ");
-                double desc = lerDoubleValido("Desconto (R$): ");
+            std::string nomeCliente = body.value("cliente", "Cliente Anônimo");
+            std::string contato = body.value("contato", "");
+            double mat = body.value("materiais", 0.0);
+            double mao = body.value("maoDeObra", 0.0);
+            double adic = body.value("adicionais", 0.0);
+            double margem = body.value("margem", 0.20);
+            double desc = body.value("desconto", 0.0);
 
-                Cliente cliente(0, nome, contato);
-                gerenciador.adicionarOrcamento(cliente, mat, mao, adic, margem, desc);
-                break;
-            }
-            case 2:
-                gerenciador.listarOrcamentos();
-                break;
+            // cria o cliente e salva o orcamento
+            Cliente novoCliente(0, nomeCliente, contato);
+            gerenciadorOrcamentos.adicionarOrcamento(novoCliente, mat, mao, adic, margem, desc);
+            gerenciadorOrcamentos.salvarEmArquivo("orcamentos.txt");
 
-            case 3: {
-                int id;
-                cout << "\nDigite o id do orçamento: ";
-                cin >> id;
+            // pega o ultimo orcamento criado para montar o pedido
+            const auto& todos = gerenciadorOrcamentos.getTodosOrcamentos();
+            const auto& ultimoOrcamento = todos.back();
 
-                if (cin.fail()) {
-                    limparBuffer();
-                    cout << "Id inválido!\n";
-                    break;
-                }
+            Pedido novoPedido(proximoIdPedido++, ultimoOrcamento, StatusPedido::EM_ABERTO, "2026-09-26");
+            listaPedidos.push_back(novoPedido);
 
-                Orcamento* o = gerenciador.buscarPorId(id);
-                if (o != nullptr) {
-                    cout << "\n--- Orçamento encontrado ---\n";
-                    cout << "Id: " << o->getId() << "\n";
-                    cout << "Cliente: " << o->getCliente().getNome() << "\n";
-                    cout << "Contato: " << o->getCliente().getContato() << "\n";
-                    cout << "Custo total: R$ " << o->calcularCustoTotal() << "\n";
-                    cout << "Preço bruto: R$ " << o->calcularPrecoBruto() << "\n";
-                    cout << "Preço final: R$ " << o->calcularPrecoFinal() << "\n";
-                    cout << "Margem efetiva: " << o->calcularMargemPercentual() << "%\n";
-                } else {
-                    cout << "\nOrçamento não encontrado!\n";
-                }
-                break;
-            }
-            case 4: {
-                int id;
-                cout << "\nDigite o id do orçamento a remover: ";
-                cin >> id;
+            std::cout << "\n[C++] Novo Pedido #" << novoPedido.getId() << " cadastrado com sucesso via React!\n";
 
-                if (cin.fail()) {
-                    limparBuffer();
-                    cout << "Id inválido!\n";
-                    break;
-                }
-
-                if (gerenciador.removerOrcamento(id)) {
-                    cout << "\nOrçamento #" << id << " removido com sucesso!\n";
-                } else {
-                    cout << "\nOrçamento não encontrado!\n";
-                }
-                break;
-            }
-            case 0:
-                gerenciador.salvarEmArquivo(NOME_ARQUIVO);
-                cout << "\nDados salvos com sucesso em '" << NOME_ARQUIVO << "'. Encerrando programa...\n";
-                break;
-
-            default:
-                cout << "\nOpção inválida!\n";
-                break;
+            res.set_content(R"({"status": "sucesso"})", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 400;
+            res.set_content(R"({"status": "erro"})", "application/json");
         }
-    }
+    });
+
+    // rota options para liberar requisicoes cors do navegador
+    svr.Options(R"(/api/.*)", [](const httplib::Request&, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        res.status = 200;
+    });
+
+    std::cout << "Servidor Backend em C++ rodando em http://localhost:8080" << std::endl;
+    svr.listen("0.0.0.0", 8080);
 
     return 0;
 }

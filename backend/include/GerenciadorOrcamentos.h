@@ -1,3 +1,4 @@
+//David
 #ifndef _GERENCIADOR_ORCAMENTOS_H_
 #define _GERENCIADOR_ORCAMENTOS_H_
 
@@ -6,16 +7,20 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <iomanip>
 #include "Orcamento.h"
 
+// classe que gerencia a lista de orcamentos e o arquivo txt
 class GerenciadorOrcamentos {
 private:
     std::vector<Orcamento> orcamentos;
     int proximoId;
 
 public:
+    // construtor comecando os ids em 1
     GerenciadorOrcamentos() : proximoId(1) {}
 
+    // adiciona um novo orcamento no vector
     void adicionarOrcamento(const Cliente& cliente, double custoMateriais, 
                             double custoMaoDeObra, double custoAdicionais, 
                             double margemLucro, double desconto) {
@@ -26,6 +31,7 @@ public:
         std::cout << "\nOrçamento #" << novoOrcamento.getId() << " cadastrado com sucesso!\n";
     }
 
+    // procura o orcamento pelo id
     Orcamento* buscarPorId(int id) {
         for (auto& orcamento : orcamentos) {
             if (orcamento.getId() == id) {
@@ -35,6 +41,7 @@ public:
         return nullptr;
     }
 
+    // apaga o orcamento do vector
     bool removerOrcamento(int id) {
         for (auto it = orcamentos.begin(); it != orcamentos.end(); ++it) {
             if (it->getId() == id) {
@@ -45,6 +52,7 @@ public:
         return false;
     }
 
+    // imprime a lista de orcamentos no terminal
     void listarOrcamentos() const {
         if (orcamentos.empty()) {
             std::cout << "\nNenhum orçamento cadastrado.\n";
@@ -63,10 +71,12 @@ public:
         std::cout << "=====================================================\n";
     }
 
+    // retorna a lista completa de orcamentos
     const std::vector<Orcamento>& getTodosOrcamentos() const {
         return orcamentos;
     }
 
+    // salva os orcamentos no arquivo de texto separado por ponto e virgula
     void salvarEmArquivo(const std::string& nomeArquivo) const {
         std::ofstream arquivo(nomeArquivo);
         if (!arquivo.is_open()) {
@@ -87,7 +97,7 @@ public:
         arquivo.close();
     }
 
-    // leitura com try-catch contra estouro/erros de tipo no arquivo .txt
+    // le o arquivo txt tratando possiveis erros de formato com try catch
     void carregarDeArquivo(const std::string& nomeArquivo) {
         std::ifstream arquivo(nomeArquivo);
         if (!arquivo.is_open()) return;
