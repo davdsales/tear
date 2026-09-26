@@ -1,6 +1,6 @@
 import './Sidebar.css'
 
-function Inicio() {
+function Sidebar() {
   return (
     <aside className="sidebar">
       <h2>Tear</h2>
@@ -21,4 +21,4 @@ function Inicio() {
   
 }
 
-export default Inicio
+export default Sidebar
