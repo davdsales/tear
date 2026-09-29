@@ -22,6 +22,8 @@ function Estoque() {
   const [mostrarNovo, setMostrarNovo] = useState(false)
   const [novo, setNovo] = useState(MATERIAL_VAZIO)
   const [mov, setMov] = useState(null)
+  const [edicao, setEdicao] = useState(null)
+  const [historico, setHistorico] = useState(null)
 
   useEffect(() => { carregar() }, [])
 
@@ -79,6 +81,28 @@ function Estoque() {
     const corpo = { idMaterial: mov.material.id, tipo: mov.tipo, quantidade: mov.quantidade, observacao: mov.observacao }
     if (await enviar('/api/estoque/movimentacoes', 'POST', corpo, 'Movimentação registrada.')) {
       setMov(null)
+    }
+  }
+
+  async function salvarEdicao(e) {
+    e.preventDefault()
+    const corpo = {
+      nome: edicao.nome,
+      unidade: edicao.unidade,
+      custoUnitario: edicao.custoUnitario,
+      estoqueMinimo: edicao.estoqueMinimo
+    }
+    if (await enviar('/api/materiais/' + edicao.id, 'PUT', corpo, 'Material atualizado.')) {
+      setEdicao(null)
+    }
+  }
+
+  async function verHistorico(m) {
+    try {
+      const res = await fetch(API + '/api/estoque/movimentacoes?idMaterial=' + m.id)
+      setHistorico({ material: m, lista: await res.json() })
+    } catch {
+      setMensagem({ erro: true, texto: 'Não consegui carregar o histórico.' })
     }
   }
 
@@ -192,6 +216,57 @@ function Estoque() {
         </form>
       )}
 
+      {edicao && (
+        <form className="ec-form" onSubmit={salvarEdicao}>
+          <h2>Editar: {edicao.descricao}</h2>
+          <div className="ec-grade">
+            <label className="ec-campo">Nome
+              <input value={edicao.nome} onChange={e => setEdicao({ ...edicao, nome: e.target.value })} required />
+            </label>
+            <label className="ec-campo">Unidade
+              <input value={edicao.unidade} onChange={e => setEdicao({ ...edicao, unidade: e.target.value })} />
+            </label>
+            <label className="ec-campo">Custo por unidade (R$)
+              <input type="number" step="0.001" min="0" value={edicao.custoUnitario} onChange={e => setEdicao({ ...edicao, custoUnitario: e.target.value })} />
+            </label>
+            <label className="ec-campo">Estoque mínimo
+              <input type="number" step="any" min="0" value={edicao.estoqueMinimo} onChange={e => setEdicao({ ...edicao, estoqueMinimo: e.target.value })} />
+            </label>
+          </div>
+          <div className="ec-botoes">
+            <button className="ec-botao" type="submit">Salvar</button>
+            <button className="ec-botao secundario" type="button" onClick={() => setEdicao(null)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      {historico && (
+        <div className="ec-form">
+          <h2>Histórico: {historico.material.descricao}</h2>
+          <table className="ec-tabela">
+            <thead>
+              <tr><th>Data</th><th>Tipo</th><th>Quantidade</th><th>Observação</th></tr>
+            </thead>
+            <tbody>
+              {historico.lista.length === 0 && (
+                <tr><td colSpan="4" className="ec-vazio">Nenhuma movimentação ainda.</td></tr>
+              )}
+              {historico.lista.map(h => (
+                <tr key={h.id}>
+                  <td>{h.data}</td>
+                  <td>{h.tipo}</td>
+                  <td>{h.quantidade} {historico.material.unidade}</td>
+                  <td>{h.observacao || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="ec-botoes" style={{ marginTop: 14 }}>
+            <button className="ec-botao secundario" type="button" onClick={() => setHistorico(null)}>Fechar</button>
+          </div>
+        </div>
+      )}
+
       <table className="ec-tabela">
         <thead>
           <tr>
@@ -219,6 +294,8 @@ function Estoque() {
                   onClick={() => setMov({ material: m, tipo: 'ENTRADA', quantidade: '', observacao: '' })}>
                   Movimentar
                 </button>
+                <button className="ec-botao secundario pequeno" onClick={() => verHistorico(m)}>Histórico</button>
+                <button className="ec-botao secundario pequeno" onClick={() => setEdicao({ ...m })}>Editar</button>
                 <button className="ec-botao secundario perigo pequeno" onClick={() => excluir(m)}>Excluir</button>
               </td>
             </tr>
