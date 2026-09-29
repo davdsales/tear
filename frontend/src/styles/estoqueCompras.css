@@ -80,7 +80,7 @@
 }
 
 .ec-tabela th { background: var(--ec-fundo); font-weight: 600; }
-.ec-tabela td.acoes { display: flex; gap: 8px; }
+.ec-tabela td.acoes button { margin-right: 8px; }
 
 .ec-etiqueta {
   display: inline-block;
