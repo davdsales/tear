@@ -7,6 +7,7 @@
 #include "Orcamento.h"
 #include "GerenciadorOrcamentos.h"
 #include "Pedido.h"
+#include "RotasEstoque.h"
 
 using json = nlohmann::json;
 
@@ -14,6 +15,10 @@ using json = nlohmann::json;
 GerenciadorOrcamentos gerenciadorOrcamentos;
 std::vector<Pedido> listaPedidos;
 int proximoIdPedido = 1;
+
+// estoque e compras (Maria Gabriela)
+Estoque estoque;
+ListaCompras listaCompras;
 
 // funcao que carrega os dados do arquivo txt ou cria os orcamentos padrao
 void carregarDadosIniciais() {
@@ -42,6 +47,9 @@ int main() {
     carregarDadosIniciais();
 
     httplib::Server svr;
+
+    // rotas de estoque e compras (ficam em RotasEstoque.h)
+    registrarRotasEstoque(svr, estoque, listaCompras);
 
     // rota get para listar os pedidos em formato json para o kanban
     svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
@@ -110,7 +118,7 @@ int main() {
     // rota options para liberar requisicoes cors do navegador
     svr.Options(R"(/api/.*)", [](const httplib::Request&, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
         res.status = 200;
     });
