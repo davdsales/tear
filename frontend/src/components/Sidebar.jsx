@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 // componente da barra lateral de navegacao do sistema
 function Sidebar() {
   return (
-    <aside>
+    <aside className="sidebar">
       <nav>
         <Link to="/">Início</Link>
         <Link to="/estoque">Estoque</Link>

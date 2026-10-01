@@ -54,7 +54,7 @@ int main() {
     // rota get para listar os pedidos em formato json para o kanban
     svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
         json listaJson = json::array();
@@ -80,7 +80,7 @@ int main() {
     // rota post para receber os dados do react e criar novo orcamento e pedido
     svr.Post("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
         try {
@@ -108,6 +108,38 @@ int main() {
 
             std::cout << "\n[C++] Novo Pedido #" << novoPedido.getId() << " cadastrado com sucesso via React!\n";
 
+            res.set_content(R"({"status": "sucesso"})", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 400;
+            res.set_content(R"({"status": "erro"})", "application/json");
+        }
+    });
+
+    // rota put para atualizar o status do pedido ao mover no kanban
+    svr.Put(R"(/api/pedidos/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+
+        try {
+            int id = std::stoi(req.matches[1]);
+            auto body = json::parse(req.body);
+            std::string novoStatus = body.value("status", "Em Aberto");
+
+            for (auto& pedido : listaPedidos) {
+                if (pedido.getId() == id) {
+                    if (novoStatus == "Em Produção") {
+                        pedido.setStatus(StatusPedido::EM_PRODUCAO);
+                    } else if (novoStatus == "Concluído") {
+                        pedido.setStatus(StatusPedido::CONCLUIDO);
+                    } else {
+                        pedido.setStatus(StatusPedido::EM_ABERTO);
+                    }
+                    break;
+                }
+            }
+
+            std::cout << "\n[C++] Status do Pedido #" << id << " atualizado para: " << novoStatus << "\n";
             res.set_content(R"({"status": "sucesso"})", "application/json");
         } catch (const std::exception& e) {
             res.status = 400;
