@@ -1,36 +1,39 @@
-import React, { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Inicio from './pages/Inicio.jsx'
+import Projetos from './pages/Projetos.jsx'
+import EmConstrucao from './components/EmConstrucao.jsx'
 import PedidosKanban from './pages/PedidosKanban.jsx'
-import Sidebar from './components/Sidebar.jsx'
 
-// componente principal que controla o roteamento por hash da aplicacao
+// componente principal que controla o roteamento da aplicacao
 function App() {
-  const [rotaAtual, setRotaAtual] = useState(window.location.hash || '#Inicio');
-
-  // escuta as mudancas de hash na url para atualizar a tela
-  useEffect(() => {
-    const aoMudarRota = () => {
-      setRotaAtual(window.location.hash || '#Inicio');
-    };
-
-    window.addEventListener('hashchange', aoMudarRota);
-    return () => window.removeEventListener('hashchange', aoMudarRota);
-  }, []);
-
-  // renderiza o kanban com a barra lateral se a rota for #pedidos
-  if (rotaAtual === '#Pedidos') {
-    return (
-      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#FDFBF7' }}>
-        <Sidebar />
-        <main style={{ flex: 1, padding: '30px' }}>
-          <PedidosKanban />
-        </main>
-      </div>
-    );
-  }
-
-  // renderiza a pagina inicial por padrao
-  return <Inicio />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Inicio />} />
+        <Route path="/projetos" element={<Projetos />} />
+        <Route
+          path="/projetos/:id"
+          element={<EmConstrucao titulo="Detalhe do Projeto" />}
+        />
+        <Route
+          path="/estoque"
+          element={<EmConstrucao titulo="Estoque" />}
+        />
+        <Route
+          path="/compras"
+          element={<EmConstrucao titulo="Compras" />}
+        />
+        <Route
+          path="/pedidos"
+          element={<PedidosKanban />}
+        />
+        <Route
+          path="/financeiro"
+          element={<EmConstrucao titulo="Financeiro" />}
+        />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
-export default App;
+export default App
