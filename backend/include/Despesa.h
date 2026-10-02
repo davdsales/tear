@@ -2,7 +2,7 @@
 #define _DESPESA_H_
 
 #include <string>
-#include "transacao.h"
+#include "Transacao.h"
 
 using namespace std;
 
