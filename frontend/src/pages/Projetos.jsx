@@ -1,6 +1,5 @@
 // Kailani
 import '../styles/Projetos.css'
-import Sidebar from "../components/Sidebar";
 
 const projetosMock = [
   {
@@ -76,18 +75,14 @@ function CardProjeto({ projeto }) {
 
 function Projetos() {
   return (
-    <div className="app-layout">
-      <Sidebar />
+    <div className="projetos-conteudo">
+      <h3>Projetos</h3>
+      <a>Acompanhe o andamento de cada peça em produção.</a>
 
-      <div className="projetos-conteudo">
-        <h3>Projetos</h3>
-        <a>Acompanhe o andamento de cada peça em produção.</a>
-
-        <div className="lista-projetos">
-          {projetosMock.map((projeto) => (
-            <CardProjeto key={projeto.id} projeto={projeto} />
-          ))}
-        </div>
+      <div className="lista-projetos">
+        {projetosMock.map((projeto) => (
+          <CardProjeto key={projeto.id} projeto={projeto} />
+        ))}
       </div>
     </div>
   );

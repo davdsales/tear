@@ -6,14 +6,12 @@ import Sidebar from "./Sidebar";
 // pela rota correspondente no App.jsx — nada mais precisa mudar.
 function EmConstrucao({ titulo }) {
   return (
-    <div className="app-layout">
-      <Sidebar />
-      <div style={{ flex: 1, marginLeft: 20, fontFamily: "var(--fonte-texto)" }}>
-        <h3 style={{ fontFamily: "var(--fonte-titulo)", color: "#3D3229" }}>{titulo}</h3>
-        <p style={{ color: "#7A6F63" }}>Essa tela ainda está em construção.</p>
-      </div>
+    <div style={{ fontFamily: "var(--fonte-texto, sans-serif)" }}>
+      <h3 style={{ fontFamily: "var(--fonte-titulo, sans-serif)", color: "#3D3229" }}>{titulo}</h3>
+      <p style={{ color: "#7A6F63", marginTop: "10px" }}>Essa tela ainda está em construção.</p>
     </div>
   );
 }
 
 export default EmConstrucao;
+

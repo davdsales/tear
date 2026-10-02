@@ -1,0 +1,8 @@
+[
+{
+  "directory": "C:/Users/LENOVO/tear/build",
+  "command": "C:\\mingw64\\bin\\g++.exe  @CMakeFiles\\sistema.dir\\includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\sistema.dir\\main.cpp.obj -c C:\\Users\\LENOVO\\tear\\backend\\main.cpp",
+  "file": "C:/Users/LENOVO/tear/backend/main.cpp",
+  "output": "CMakeFiles/sistema.dir/main.cpp.obj"
+}
+]
