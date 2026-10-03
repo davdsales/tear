@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { entrarComEmail } from "../usuario.js";
 import "../styles/Entrar.css";
 
 import logo from "../assets/logo.png";
@@ -20,7 +20,7 @@ export default function Entrar() {
             email,
             senha
         });
-
+        entrarComEmail(email);
         alert("Login realizado com sucesso!");
 
         navigate("/inicio");

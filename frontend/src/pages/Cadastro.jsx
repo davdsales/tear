@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "../styles/Cadastro.css";
-
+import { salvarCadastro } from "../usuario.js";
 import logo from "../assets/logo.png";
 
 export default function Cadastro() {
@@ -28,7 +28,8 @@ export default function Cadastro() {
             email,
             senha
         });
-
+        
+        salvarCadastro(nome, email);
         alert("Cadastro finalizado com sucesso!");
 
         navigate("/inicio");

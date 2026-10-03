@@ -1,0 +1,14 @@
+body {
+  background-color: #FAF6F1;
+  font-family: var(--fonte-texto);
+}
+
+:root {
+  --fonte-titulo: 'DM Sans', sans-serif;
+  --fonte-texto: 'Manrope', sans-serif;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}

@@ -1,14 +1,15 @@
 import '../styles/Inicio.css'
-
+import { usuarioLogado, primeiroNome } from '../usuario.js'
 import imgReceita from '../assets/img_receita.png'
 import imgReceber from '../assets/img_receber.png'
 import imgAndamento from '../assets/img_andamento.png'
 import imgEstoque from '../assets/img_estoque.png'
 
 function Inicio() {
+  const usuario = usuarioLogado()
   return (
     <div className="inicio-conteudo">
-      <h3>Olá, David 👋</h3>
+      <h3>Olá, {primeiroNome(usuario?.nome)} 👋</h3>
       <p>Veja como está seu trabalho hoje.</p>
 
       <div className="indicadores">
