@@ -5,34 +5,28 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <iostream>
 #include "Transacao.h"
 #include "Receita.h"
 #include "Despesa.h"
+#include "BancoDados.h"
 
 using namespace std;
 
+// guarda as receitas e despesas em memoria (para os calculos)
+// e grava cada alteracao na tabela "transacoes" do banco SQLite
 class GerenciamentoFinanceiro{
 
     private:
         vector<Receita*> receitas;
         vector<Despesa*> despesas;
-        int proximoId = 1;
+        BancoDados* banco = nullptr;
+        int usuarioId = 0;
         string ultimoErro;
-
-        static string limparCampo(string texto){
-            texto.erase(remove(texto.begin(), texto.end(), ';'), texto.end());
-            texto.erase(remove(texto.begin(), texto.end(), '\n'), texto.end());
-            texto.erase(remove(texto.begin(), texto.end(), '\r'), texto.end());
-            return texto;
-        }
 
         bool validar(const string& descricao, double valor){
             ultimoErro.clear();
-            if (descricao.empty()) ultimoErro = "Preencha a descrição.";
+            if (!banco) ultimoErro = "Banco de dados não conectado.";
+            else if (descricao.empty()) ultimoErro = "Preencha a descrição.";
             else if (valor <= 0) ultimoErro = "O valor precisa ser maior que zero.";
             return ultimoErro.empty();
         }
@@ -44,6 +38,28 @@ class GerenciamentoFinanceiro{
             despesas.clear();
         }
 
+        transacao* buscarPorId(int id){
+            for (Receita* receita : receitas) if (receita->getId() == id) return receita;
+            for (Despesa* despesa : despesas) if (despesa->getId() == id) return despesa;
+            return nullptr;
+        }
+
+        // le todas as linhas da tabela e recria os objetos
+        void carregarDoBanco(){
+            limpar();
+            Consulta consulta(*banco, "SELECT id, tipo, descricao, valor, data, origem, categoria FROM transacoes WHERE usuario_id = ?");
+            consulta.ligar(1, usuarioId);
+            while (consulta.proximaLinha()){
+                int id = consulta.inteiro(0);
+                string tipo = consulta.texto(1);
+                if (tipo == "Receita"){
+                    adicionarTransacao(new Receita(id, consulta.texto(2), consulta.numero(3), consulta.texto(4), consulta.texto(5)));
+                } else {
+                    adicionarTransacao(new Despesa(id, consulta.texto(2), consulta.numero(3), consulta.texto(4), consulta.texto(6)));
+                }
+            }
+        }
+
     public:
 
         GerenciamentoFinanceiro() {}
@@ -53,34 +69,72 @@ class GerenciamentoFinanceiro{
         GerenciamentoFinanceiro(const GerenciamentoFinanceiro&) = delete;
         GerenciamentoFinanceiro& operator=(const GerenciamentoFinanceiro&) = delete;
 
+        static void criarTabela(BancoDados& b){
+            b.executar(
+                "CREATE TABLE IF NOT EXISTS transacoes ("
+                " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+                " tipo TEXT NOT NULL CHECK (tipo IN ('Receita', 'Despesa')),"
+                " descricao TEXT NOT NULL,"
+                " valor REAL NOT NULL CHECK (valor > 0),"
+                " data TEXT NOT NULL,"
+                " origem TEXT,"
+                " categoria TEXT)");
+        }
+
+        // liga ao banco e carrega so as transacoes deste usuario
+        void conectar(BancoDados& b, int idUsuario){
+            banco = &b;
+            usuarioId = idUsuario;
+            carregarDoBanco();
+        }
+
         string getUltimoErro() const { return ultimoErro; }
 
         void adicionarTransacao(Receita* receita){
             receitas.push_back(receita);
-            proximoId = max(proximoId, receita->getId() + 1);
         }
 
         void adicionarTransacao(Despesa* despesa){
             despesas.push_back(despesa);
-            proximoId = max(proximoId, despesa->getId() + 1);
         }
 
-        // cria a receita com id novo; devolve 0 se os dados forem invalidos
+// CRUD
+
+        // create: grava no banco e usa o id gerado por ele; devolve 0 se der errado
         int adicionarReceita(const string& descricao, double valor, const string& data, const string& origem){
-            if (!validar(limparCampo(descricao), valor)) return 0;
-            int id = proximoId;
-            adicionarTransacao(new Receita(id, limparCampo(descricao), valor, data, limparCampo(origem)));
+            if (!validar(descricao, valor)) return 0;
+
+            Consulta insert(*banco, "INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data, origem) VALUES (?, 'Receita', ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, descricao);
+            insert.ligar(3, valor);
+            insert.ligar(4, data);
+            insert.ligar(5, origem);
+            if (!insert.executar()){ ultimoErro = "Não consegui salvar no banco."; return 0; }
+
+            int id = banco->ultimoId();
+            adicionarTransacao(new Receita(id, descricao, valor, data, origem));
             return id;
         }
 
         int adicionarDespesa(const string& descricao, double valor, const string& data, const string& categoria){
-            if (!validar(limparCampo(descricao), valor)) return 0;
-            int id = proximoId;
-            adicionarTransacao(new Despesa(id, limparCampo(descricao), valor, data, limparCampo(categoria)));
+            if (!validar(descricao, valor)) return 0;
+
+            Consulta insert(*banco, "INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data, categoria) VALUES (?, 'Despesa', ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, descricao);
+            insert.ligar(3, valor);
+            insert.ligar(4, data);
+            insert.ligar(5, categoria);
+            if (!insert.executar()){ ultimoErro = "Não consegui salvar no banco."; return 0; }
+
+            int id = banco->ultimoId();
+            adicionarTransacao(new Despesa(id, descricao, valor, data, categoria));
             return id;
         }
 
-        // receitas e despesas juntas, da mais recente para a mais antiga
+        // read: receitas e despesas juntas, da mais recente para a mais antiga
         vector<const transacao*> listarTransacoes() const{
             vector<const transacao*> todas;
             for (Receita* receita : receitas) todas.push_back(receita);
@@ -93,7 +147,55 @@ class GerenciamentoFinanceiro{
             return todas;
         }
 
-        bool vazio() const { return receitas.empty() && despesas.empty(); }
+        // update: o tipo nao muda; receita usa a origem e despesa usa a categoria
+        bool editarTransacao(int id, const string& descricao, double valor, const string& data,
+                             const string& origem, const string& categoria){
+            if (!validar(descricao, valor)) return false;
+
+            transacao* t = buscarPorId(id);
+            if (!t){ ultimoErro = "Transação não encontrada."; return false; }
+
+            Receita* receita = dynamic_cast<Receita*>(t);
+            string coluna = receita ? "origem" : "categoria";
+            string extra = receita ? origem : categoria;
+
+            Consulta update(*banco, "UPDATE transacoes SET descricao = ?, valor = ?, data = ?, " + coluna + " = ? WHERE id = ? AND usuario_id = ?");
+            update.ligar(1, descricao);
+            update.ligar(2, valor);
+            update.ligar(3, data);
+            update.ligar(4, extra);
+            update.ligar(5, id);
+            update.ligar(6, usuarioId);
+            if (!update.executar()){ ultimoErro = "Não consegui salvar no banco."; return false; }
+
+            t->setDescricao(descricao);
+            t->setValor(valor);
+            t->setData(data);
+            if (receita) receita->setOrigem(extra);
+            else dynamic_cast<Despesa*>(t)->setCategoria(extra);
+            return true;
+        }
+
+        // delete
+        bool removerTransacao(int id){
+            ultimoErro.clear();
+            if (!buscarPorId(id)){ ultimoErro = "Transação não encontrada."; return false; }
+
+            Consulta del(*banco, "DELETE FROM transacoes WHERE id = ? AND usuario_id = ?");
+            del.ligar(1, id);
+            del.ligar(2, usuarioId);
+            if (!del.executar()){ ultimoErro = "Não consegui apagar no banco."; return false; }
+
+            for (auto it = receitas.begin(); it != receitas.end(); ++it){
+                if ((*it)->getId() == id){ delete *it; receitas.erase(it); return true; }
+            }
+            for (auto it = despesas.begin(); it != despesas.end(); ++it){
+                if ((*it)->getId() == id){ delete *it; despesas.erase(it); return true; }
+            }
+            return true;
+        }
+
+// Calculos
 
         double totalReceitas(){
 
@@ -182,55 +284,6 @@ class GerenciamentoFinanceiro{
             }
 
             return total;
-        }
-
-// Arquivo: tipo;id;data;valor;descricao;origem ou categoria
-
-        void salvarEmArquivo(const string& nomeArquivo) const{
-            ofstream arquivo(nomeArquivo);
-            if (!arquivo.is_open()){
-                cerr << "Erro ao abrir " << nomeArquivo << " para escrita!\n";
-                return;
-            }
-
-            arquivo << fixed << setprecision(2);
-            for (Receita* r : receitas){
-                arquivo << "R;" << r->getId() << ";" << r->getData() << ";" << r->getValor() << ";"
-                        << r->getDescricao() << ";" << r->getOrigem() << "\n";
-            }
-            for (Despesa* d : despesas){
-                arquivo << "D;" << d->getId() << ";" << d->getData() << ";" << d->getValor() << ";"
-                        << d->getDescricao() << ";" << d->getCategoria() << "\n";
-            }
-        }
-
-        void carregarDeArquivo(const string& nomeArquivo){
-            ifstream arquivo(nomeArquivo);
-            if (!arquivo.is_open()) return;
-
-            limpar();
-            proximoId = 1;
-            string linha;
-
-            while (getline(arquivo, linha)){
-                if (linha.empty()) continue;
-
-                stringstream ss(linha);
-                string tipo, id, data, valor, descricao, extra;
-                getline(ss, tipo, ';');
-                getline(ss, id, ';');
-                getline(ss, data, ';');
-                getline(ss, valor, ';');
-                getline(ss, descricao, ';');
-                getline(ss, extra);
-
-                try {
-                    if (tipo == "R") adicionarTransacao(new Receita(stoi(id), descricao, stod(valor), data, extra));
-                    else if (tipo == "D") adicionarTransacao(new Despesa(stoi(id), descricao, stod(valor), data, extra));
-                } catch (const exception&) {
-                    cerr << "Aviso: linha inválida ignorada em " << nomeArquivo << "\n";
-                }
-            }
         }
 };
 

@@ -4,13 +4,11 @@
 
 #include <vector>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
 #include <iomanip>
 #include "Orcamento.h"
+#include "BancoDados.h"
 
-// classe que gerencia a lista de orcamentos e o arquivo txt
+// classe que gerencia a lista de orcamentos e a tabela orcamentos do banco
 class GerenciadorOrcamentos {
 private:
     std::vector<Orcamento> orcamentos;
@@ -76,83 +74,62 @@ public:
         return orcamentos;
     }
 
-    // salva os orcamentos no arquivo de texto separado por ponto e virgula
-    void salvarEmArquivo(const std::string& nomeArquivo) const {
-        std::ofstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) {
-            std::cerr << "Erro ao abrir o arquivo para escrita!\n";
-            return;
-        }
-
-        for (const auto& o : orcamentos) {
-            arquivo << o.getId() << ";"
-                    << o.getCliente().getNome() << ";"
-                    << o.getCliente().getContato() << ";"
-                    << o.getCustoMateriais() << ";"
-                    << o.getCustoMaoDeObra() << ";"
-                    << o.getCustoAdicionais() << ";"
-                    << o.getMargemLucroDesejada() << ";"
-                    << o.getDesconto() << "\n";
-        }
-        arquivo.close();
+    static void criarTabela(BancoDados& banco) {
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS orcamentos ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id INTEGER NOT NULL,"
+            " cliente TEXT NOT NULL,"
+            " contato TEXT,"
+            " custo_materiais REAL NOT NULL,"
+            " custo_mao_de_obra REAL NOT NULL,"
+            " custo_adicionais REAL NOT NULL,"
+            " margem_lucro REAL NOT NULL,"
+            " desconto REAL NOT NULL,"
+            " PRIMARY KEY (usuario_id, id))");
     }
 
-    // le o arquivo txt tratando possiveis erros de formato com try catch
-    void carregarDeArquivo(const std::string& nomeArquivo) {
-        std::ifstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) return;
+    // grava os orcamentos do usuario na tabela (substitui o antigo salvarEmArquivo)
+    void salvarNoBanco(BancoDados& banco, int usuarioId) const {
+        banco.executar("BEGIN");
+        Consulta apagar(banco, "DELETE FROM orcamentos WHERE usuario_id = ?");
+        apagar.ligar(1, usuarioId);
+        apagar.executar();
+        for (const auto& o : orcamentos) {
+            Consulta insert(banco,
+                "INSERT INTO orcamentos (usuario_id, id, cliente, contato, custo_materiais, custo_mao_de_obra,"
+                " custo_adicionais, margem_lucro, desconto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, o.getId());
+            insert.ligar(3, o.getCliente().getNome());
+            insert.ligar(4, o.getCliente().getContato());
+            insert.ligar(5, o.getCustoMateriais());
+            insert.ligar(6, o.getCustoMaoDeObra());
+            insert.ligar(7, o.getCustoAdicionais());
+            insert.ligar(8, o.getMargemLucroDesejada());
+            insert.ligar(9, o.getDesconto());
+            insert.executar();
+        }
+        banco.executar("COMMIT");
+    }
 
+    // le os orcamentos do usuario (substitui o antigo carregarDeArquivo)
+    void carregarDoBanco(BancoDados& banco, int usuarioId) {
         orcamentos.clear();
-        std::string linha;
         int maxId = 0;
 
-        while (std::getline(arquivo, linha)) {
-            if (linha.empty()) continue;
-
-            std::stringstream ss(linha);
-            std::string temp;
-
-            try {
-                int id;
-                std::string nomeCliente, contatoCliente;
-                double mat, mao, adic, margem, desc;
-
-                if (!std::getline(ss, temp, ';')) continue;
-                id = std::stoi(temp);
-
-                std::getline(ss, nomeCliente, ';');
-                std::getline(ss, contatoCliente, ';');
-
-                if (!std::getline(ss, temp, ';')) continue;
-                mat = std::stod(temp);
-
-                if (!std::getline(ss, temp, ';')) continue;
-                mao = std::stod(temp);
-
-                if (!std::getline(ss, temp, ';')) continue;
-                adic = std::stod(temp);
-
-                if (!std::getline(ss, temp, ';')) continue;
-                margem = std::stod(temp);
-
-                if (!std::getline(ss, temp, ';')) continue;
-                desc = std::stod(temp);
-
-                Cliente c(0, nomeCliente, contatoCliente);
-                Orcamento o(id, c, mat, mao, adic, margem, desc);
-                orcamentos.push_back(o);
-
-                if (id > maxId) maxId = id;
-
-            } catch (const std::invalid_argument& e) {
-                std::cerr << "Aviso: Linha com formato inválido ignorada no arquivo.\n";
-            } catch (const std::out_of_range& e) {
-                std::cerr << "Aviso: Número fora do limite permitido no arquivo.\n";
-            }
+        Consulta consulta(banco,
+            "SELECT id, cliente, contato, custo_materiais, custo_mao_de_obra, custo_adicionais,"
+            " margem_lucro, desconto FROM orcamentos WHERE usuario_id = ? ORDER BY id");
+        consulta.ligar(1, usuarioId);
+        while (consulta.proximaLinha()) {
+            int id = consulta.inteiro(0);
+            Cliente c(0, consulta.texto(1), consulta.texto(2));
+            orcamentos.push_back(Orcamento(id, c, consulta.numero(3), consulta.numero(4),
+                                           consulta.numero(5), consulta.numero(6), consulta.numero(7)));
+            if (id > maxId) maxId = id;
         }
-
         proximoId = maxId + 1;
-        arquivo.close();
     }
 };
 

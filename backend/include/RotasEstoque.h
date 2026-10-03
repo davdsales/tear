@@ -9,19 +9,17 @@
 #include "nlohmann/json.hpp"
 #include "Estoque.h"
 #include "ListaCompras.h"
+#include "ContextoUsuario.h"
 
 // rotas de estoque e compras. O main.cpp so precisa chamar registrarRotasEstoque(...)
 namespace rotas_estoque {
 
 using json = nlohmann::json;
 
-inline const std::string ARQUIVO_MATERIAIS = "materiais.txt";
-inline const std::string ARQUIVO_MOVIMENTACOES = "movimentacoes.txt";
-inline const std::string ARQUIVO_COMPRAS = "compras.txt";
-
 inline void cors(httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type, X-Usuario-Id");
 }
 
 inline void responder(httplib::Response& res, int status, const json& corpo) {
@@ -63,9 +61,8 @@ inline std::string lerTexto(const json& b, const std::string& chave, const std::
     return padrao;
 }
 
-inline void salvarTudo(const Estoque& estoque, const ListaCompras& listaCompras) {
-    estoque.salvarEmArquivo(ARQUIVO_MATERIAIS, ARQUIVO_MOVIMENTACOES);
-    listaCompras.salvarEmArquivo(ARQUIVO_COMPRAS);
+inline void semLogin(httplib::Response& res) {
+    responderErro(res, 401, "Faça login para continuar.");
 }
 
 // --- conversao para json ---
@@ -175,22 +172,25 @@ inline void aplicarEdicao(Material& m, const json& b) {
 
 }  // namespace rotas_estoque
 
-// carrega os arquivos e registra todas as rotas de estoque e compras
-inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaCompras& listaCompras) {
+// registra as rotas de estoque e compras; cada rota usa os dados de quem esta logado
+inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes) {
     using namespace rotas_estoque;
-
-    estoque.carregarDeArquivo(ARQUIVO_MATERIAIS, ARQUIVO_MOVIMENTACOES);
-    listaCompras.carregarDeArquivo(ARQUIVO_COMPRAS);
 
     // ---------- materiais ----------
 
-    svr.Get("/api/materiais", [&estoque](const httplib::Request&, httplib::Response& res) {
+    svr.Get("/api/materiais", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         json lista = json::array();
         for (const Material* m : estoque.getMateriais()) lista.push_back(materialParaJson(estoque, *m));
         responder(res, 200, lista);
     });
 
-    svr.Post("/api/materiais", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Post("/api/materiais", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         try {
             json body = json::parse(req.body);
             std::unique_ptr<Material> novo(criarMaterial(body));
@@ -205,37 +205,46 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
                 return responderErro(res, 400, estoque.getUltimoErro());
             }
 
-            salvarTudo(estoque, listaCompras);
+            d->salvarEstoque(sessoes.getBanco());
             responder(res, 201, {{"status", "sucesso"}, {"id", id}});
         } catch (const std::exception&) {
             responderErro(res, 400, "Dados inválidos no corpo da requisição.");
         }
     });
 
-    svr.Put(R"(/api/materiais/(\d+))", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Put(R"(/api/materiais/(\d+))", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         try {
             Material* m = estoque.buscarPorId(std::stoi(req.matches[1].str()));
             if (m == nullptr) return responderErro(res, 404, "Material não encontrado.");
             aplicarEdicao(*m, json::parse(req.body));
-            salvarTudo(estoque, listaCompras);
+            d->salvarEstoque(sessoes.getBanco());
             responder(res, 200, {{"status", "sucesso"}});
         } catch (const std::exception&) {
             responderErro(res, 400, "Dados inválidos no corpo da requisição.");
         }
     });
 
-    svr.Delete(R"(/api/materiais/(\d+))", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Delete(R"(/api/materiais/(\d+))", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         int id = std::stoi(req.matches[1].str());
         if (estoque.buscarPorId(id) == nullptr) return responderErro(res, 404, "Material não encontrado.");
         if (!estoque.removerMaterial(id)) return responderErro(res, 409, estoque.getUltimoErro());
-        salvarTudo(estoque, listaCompras);
+        d->salvarEstoque(sessoes.getBanco());
         responder(res, 200, {{"status", "sucesso"}});
     });
 
     // ---------- estoque ----------
 
     // resumo para a tela inicial (card "Itens com estoque baixo")
-    svr.Get("/api/estoque", [&estoque](const httplib::Request&, httplib::Response& res) {
+    svr.Get("/api/estoque", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         json baixos = json::array();
         for (const Material* m : estoque.getMateriais()) {
             if (estoque.estaAbaixoDoMinimo(*m)) baixos.push_back(materialParaJson(estoque, *m));
@@ -247,7 +256,10 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
         });
     });
 
-    svr.Get("/api/estoque/movimentacoes", [&estoque](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/api/estoque/movimentacoes", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         // filtro opcional: /api/estoque/movimentacoes?idMaterial=3
         int filtro = 0;
         if (req.has_param("idMaterial")) {
@@ -260,7 +272,10 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
         responder(res, 200, lista);
     });
 
-    svr.Post("/api/estoque/movimentacoes", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Post("/api/estoque/movimentacoes", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
         try {
             json body = json::parse(req.body);
             int idMaterial = static_cast<int>(lerNumero(body, "idMaterial"));
@@ -276,7 +291,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
             else return responderErro(res, 400, "Tipo de movimentação inválido. Use ENTRADA, CONSUMO ou AJUSTE.");
 
             if (!ok) return responderErro(res, 400, estoque.getUltimoErro());
-            salvarTudo(estoque, listaCompras);
+            d->salvarEstoque(sessoes.getBanco());
             responder(res, 201, {{"status", "sucesso"}, {"saldo", estoque.calcularSaldo(idMaterial)}});
         } catch (const std::exception&) {
             responderErro(res, 400, "Dados inválidos no corpo da requisição.");
@@ -285,14 +300,22 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
 
     // ---------- compras ----------
 
-    svr.Get("/api/compras", [&estoque, &listaCompras](const httplib::Request&, httplib::Response& res) {
+    svr.Get("/api/compras", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
+        ListaCompras& listaCompras = d->compras;
         json lista = json::array();
         for (const auto& c : listaCompras.getCompras()) lista.push_back(compraParaJson(estoque, c));
         responder(res, 200, lista);
     });
 
     // cria a compra com os itens; se "confirmar" for true, ja da entrada no estoque
-    svr.Post("/api/compras", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Post("/api/compras", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
+        ListaCompras& listaCompras = d->compras;
         try {
             json body = json::parse(req.body);
             if (!body.contains("itens") || !body["itens"].is_array() || body["itens"].empty()) {
@@ -317,26 +340,33 @@ inline void registrarRotasEstoque(httplib::Server& svr, Estoque& estoque, ListaC
                 return responderErro(res, 400, erro);
             }
 
-            salvarTudo(estoque, listaCompras);
+            d->salvarEstoque(sessoes.getBanco());
             responder(res, 201, {{"status", "sucesso"}, {"id", id}});
         } catch (const std::exception&) {
             responderErro(res, 400, "Dados inválidos no corpo da requisição.");
         }
     });
 
-    svr.Post(R"(/api/compras/(\d+)/confirmar)", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Post(R"(/api/compras/(\d+)/confirmar)", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        Estoque& estoque = d->estoque;
+        ListaCompras& listaCompras = d->compras;
         int id = std::stoi(req.matches[1].str());
         if (listaCompras.buscarPorId(id) == nullptr) return responderErro(res, 404, "Compra não encontrada.");
         if (!listaCompras.confirmarCompra(id, estoque)) return responderErro(res, 400, listaCompras.getUltimoErro());
-        salvarTudo(estoque, listaCompras);
+        d->salvarEstoque(sessoes.getBanco());
         responder(res, 200, {{"status", "sucesso"}});
     });
 
-    svr.Delete(R"(/api/compras/(\d+))", [&estoque, &listaCompras](const httplib::Request& req, httplib::Response& res) {
+    svr.Delete(R"(/api/compras/(\d+))", [&sessoes](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+        ListaCompras& listaCompras = d->compras;
         int id = std::stoi(req.matches[1].str());
         if (listaCompras.buscarPorId(id) == nullptr) return responderErro(res, 404, "Compra não encontrada.");
         if (!listaCompras.removerCompra(id)) return responderErro(res, 409, listaCompras.getUltimoErro());
-        salvarTudo(estoque, listaCompras);
+        d->salvarEstoque(sessoes.getBanco());
         responder(res, 200, {{"status", "sucesso"}});
     });
 }

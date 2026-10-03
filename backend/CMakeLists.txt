@@ -1,16 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
-project(SistemaBackend)
+project(SistemaBackend C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
 
-add_executable(sistema main.cpp)
+# o SQLite vem como codigo-fonte (sqlite/sqlite3.c), entao nao precisa instalar nada
+add_executable(sistema main.cpp sqlite/sqlite3.c)
 
-# Garante a vinculação da biblioteca do Winsock no Windows
-if(WIN32)
-    target_link_libraries(sistema PRIVATE ws2_32)
-    
 # httplib usa sockets do Windows
 if(WIN32)
     target_link_libraries(sistema ws2_32)

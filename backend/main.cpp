@@ -1,82 +1,52 @@
 #include "httplib.h"
 #include "nlohmann/json.hpp"
 #include <iostream>
-#include <vector>
 
 #include "Cliente.h"
 #include "Orcamento.h"
-#include "GerenciadorOrcamentos.h"
 #include "Pedido.h"
+#include "ContextoUsuario.h"
 #include "RotasEstoque.h"
 #include "RotasFinanceiro.h"
+#include "RotasUsuarios.h"
 
 using json = nlohmann::json;
+using rotas_estoque::responder;
+using rotas_estoque::semLogin;
 
-// instancias globais para gerenciar os orcamentos e a lista de pedidos
-GerenciadorOrcamentos gerenciadorOrcamentos;
-std::vector<Pedido> listaPedidos;
-int proximoIdPedido = 1;
-
-// estoque e compras (Maria Gabriela)
-Estoque estoque;
-ListaCompras listaCompras;
-GerenciamentoFinanceiro financeiro;
-
-// funcao que carrega os dados do arquivo txt ou cria os orcamentos padrao
-void carregarDadosIniciais() {
-    gerenciadorOrcamentos.carregarDeArquivo("orcamentos.txt");
-
-    if (gerenciadorOrcamentos.getTodosOrcamentos().empty()) {
-        Cliente c1(1, "Maria Clara", "81999998888");
-        Cliente c2(2, "João Pedro", "81988887777");
-
-        gerenciadorOrcamentos.adicionarOrcamento(c1, 50.0, 40.0, 10.0, 0.20, 0.0);
-        gerenciadorOrcamentos.adicionarOrcamento(c2, 100.0, 80.0, 20.0, 0.25, 0.0);
-
-        gerenciadorOrcamentos.salvarEmArquivo("orcamentos.txt");
-    }
-
-    const auto& orcamentos = gerenciadorOrcamentos.getTodosOrcamentos();
-    if (!orcamentos.empty() && listaPedidos.empty()) {
-        listaPedidos.push_back(Pedido(proximoIdPedido++, orcamentos[0], StatusPedido::EM_ABERTO, "2026-09-26"));
-        if (orcamentos.size() > 1) {
-            listaPedidos.push_back(Pedido(proximoIdPedido++, orcamentos[1], StatusPedido::EM_PRODUCAO, "2026-09-26"));
-        }
-    }
-}
+// banco SQLite cada conta tem os seus proprios materiais, compras, orcamentos, pedidos e transacoes
+BancoDados banco("database/tear.db");
+SessaoUsuarios sessoes(banco);
 
 int main() {
-    carregarDadosIniciais();
-
     httplib::Server svr;
 
-    // Trata requisições PREFLIGHT (OPTIONS)
+// Trata requisições 
     svr.Options(".*", [](const httplib::Request& req, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type, X-Usuario-Id");
         res.status = 200;
     });
 
-    // Adiciona o cabeçalho de CORS globalmente (uma única vez por resposta)
+// Adiciona o cabeçalho de CORS globalmente (uma única vez por resposta)
     svr.set_post_routing_handler([](const httplib::Request& req, httplib::Response& res) {
         if (!res.has_header("Access-Control-Allow-Origin")) {
             res.set_header("Access-Control-Allow-Origin", "*");
         }
     });
 
-    // rotas de estoque e compras (ficam em RotasEstoque.h)
-    registrarRotasEstoque(svr, estoque, listaCompras);
-    registrarRotasFinanceiro(svr, financeiro, listaPedidos, estoque);
+    registrarRotasEstoque(svr, sessoes);
+    registrarRotasFinanceiro(svr, sessoes);
+    registrarRotasUsuarios(svr, banco);
 
-    // rota get para listar os pedidos em formato json para o kanban
-    svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+// rota get para listar os pedidos em formato json para o kanban
+    svr.Get("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
 
         json listaJson = json::array();
-
-        for (const auto& pedido : listaPedidos) {
+        for (const auto& pedido : d->pedidos) {
             const auto& orcamento = pedido.getOrcamento();
             const auto& cliente = orcamento.getCliente();
 
@@ -90,14 +60,13 @@ int main() {
                 {"dataCriacao", pedido.getDataCriacao()}
             });
         }
-
-        res.set_content(listaJson.dump(), "application/json");
+        responder(res, 200, listaJson);
     });
 
-    // rota post para receber os dados do react e criar novo orcamento e pedido
+// rota post para receber os dados do react e criar novo orcamento e pedido
     svr.Post("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
 
         try {
             auto body = json::parse(req.body);
@@ -110,38 +79,34 @@ int main() {
             double margem = body.value("margem", 0.20);
             double desc = body.value("desconto", 0.0);
 
-            // cria o cliente e salva o orcamento
+// cria o cliente e o orcamento
             Cliente novoCliente(0, nomeCliente, contato);
-            gerenciadorOrcamentos.adicionarOrcamento(novoCliente, mat, mao, adic, margem, desc);
-            gerenciadorOrcamentos.salvarEmArquivo("orcamentos.txt");
+            d->orcamentos.adicionarOrcamento(novoCliente, mat, mao, adic, margem, desc);
 
-            // pega o ultimo orcamento criado para montar o pedido
-            const auto& todos = gerenciadorOrcamentos.getTodosOrcamentos();
-            const auto& ultimoOrcamento = todos.back();
-
-            Pedido novoPedido(proximoIdPedido++, ultimoOrcamento, StatusPedido::EM_ABERTO, "2026-09-26");
-            listaPedidos.push_back(novoPedido);
+// pega o ultimo orcamento criado para montar o pedido
+            const auto& ultimoOrcamento = d->orcamentos.getTodosOrcamentos().back();
+            Pedido novoPedido(d->proximoIdPedido++, ultimoOrcamento, StatusPedido::EM_ABERTO, rotas_estoque::dataDeHoje());
+            d->pedidos.push_back(novoPedido);
+            d->salvarPedidos(banco);
 
             std::cout << "\n[C++] Novo Pedido #" << novoPedido.getId() << " cadastrado com sucesso via React!\n";
-
-            res.set_content(R"({"status": "sucesso"})", "application/json");
+            responder(res, 201, {{"status", "sucesso"}});
         } catch (const std::exception& e) {
-            res.status = 400;
-            res.set_content(R"({"status": "erro"})", "application/json");
+            responder(res, 400, {{"status", "erro"}});
         }
     });
 
-    // rota put para atualizar o status do pedido ao mover no kanban
+// rota put para atualizar o status do pedido ao mover no kanban
     svr.Put(R"(/api/pedidos/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
 
         try {
             int id = std::stoi(req.matches[1]);
             auto body = json::parse(req.body);
             std::string novoStatus = body.value("status", "Em Aberto");
 
-            for (auto& pedido : listaPedidos) {
+            for (auto& pedido : d->pedidos) {
                 if (pedido.getId() == id) {
                     if (novoStatus == "Em Produção") {
                         pedido.setStatus(StatusPedido::EM_PRODUCAO);
@@ -153,20 +118,13 @@ int main() {
                     break;
                 }
             }
+            d->salvarPedidos(banco);
 
             std::cout << "\n[C++] Status do Pedido #" << id << " atualizado para: " << novoStatus << "\n";
-            res.set_content(R"({"status": "sucesso"})", "application/json");
+            responder(res, 200, {{"status", "sucesso"}});
         } catch (const std::exception& e) {
-            res.status = 400;
-            res.set_content(R"({"status": "erro"})", "application/json");
+            responder(res, 400, {{"status", "erro"}});
         }
-    });
-
-    // rota options para liberar requisicoes cors do navegador
-    svr.Options(R"(/api/.*)", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
-        res.status = 200;
     });
 
     std::cout << "Servidor Backend em C++ rodando em http://localhost:8080" << std::endl;
