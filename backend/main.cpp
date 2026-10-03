@@ -8,6 +8,7 @@
 #include "GerenciadorOrcamentos.h"
 #include "Pedido.h"
 #include "RotasEstoque.h"
+#include "RotasFinanceiro.h"
 
 using json = nlohmann::json;
 
@@ -19,6 +20,7 @@ int proximoIdPedido = 1;
 // estoque e compras (Maria Gabriela)
 Estoque estoque;
 ListaCompras listaCompras;
+GerenciamentoFinanceiro financeiro;
 
 // funcao que carrega os dados do arquivo txt ou cria os orcamentos padrao
 void carregarDadosIniciais() {
@@ -58,11 +60,14 @@ int main() {
 
     // Adiciona o cabeçalho de CORS globalmente (uma única vez por resposta)
     svr.set_post_routing_handler([](const httplib::Request& req, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
+        if (!res.has_header("Access-Control-Allow-Origin")) {
+            res.set_header("Access-Control-Allow-Origin", "*");
+        }
     });
 
     // rotas de estoque e compras (ficam em RotasEstoque.h)
     registrarRotasEstoque(svr, estoque, listaCompras);
+    registrarRotasFinanceiro(svr, financeiro, listaPedidos, estoque);
 
     // rota get para listar os pedidos em formato json para o kanban
     svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
@@ -165,7 +170,9 @@ int main() {
     });
 
     std::cout << "Servidor Backend em C++ rodando em http://localhost:8080" << std::endl;
-    svr.listen("0.0.0.0", 8080);
+    if (!svr.listen("0.0.0.0", 8080)) {
+        std::cout << "Nao consegui abrir a porta 8080. Feche o outro sistema.exe e tente de novo." << std::endl;
+    }
 
     return 0;
 }

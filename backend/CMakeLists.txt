@@ -10,4 +10,8 @@ add_executable(sistema main.cpp)
 # Garante a vinculação da biblioteca do Winsock no Windows
 if(WIN32)
     target_link_libraries(sistema PRIVATE ws2_32)
+    
+# httplib usa sockets do Windows
+if(WIN32)
+    target_link_libraries(sistema ws2_32)
 endif()
