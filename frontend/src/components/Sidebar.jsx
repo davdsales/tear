@@ -17,11 +17,9 @@ function Sidebar() {
       <nav>
         <NavLink to="/inicio" end>Início</NavLink>
         <NavLink to="/estoque">Estoque</NavLink>
-        <NavLink to="/compras">Compras</NavLink>
-        <NavLink to="/projetos">Projetos</NavLink>
-        <NavLink to="/producao">Produção</NavLink>
+        <NavLink to="/compras">Orçamento</NavLink>
         <NavLink to="/pedidos">Pedidos</NavLink>
-        <NavLink to="/financeiro">Financeiro</NavLink>
+
       </nav>
 
 
