@@ -29,6 +29,16 @@ class transacao{
         string getData() const{
             return data;
         }
+                void setDescricao(string novaDescricao){
+            descricao = novaDescricao;
+        }
+        void setValor(double novoValor){
+            valor = novoValor;
+        }
+        void setData(string novaData){
+            data = novaData;
+        }
+
 
         // Método virtual saldo
         virtual double ContribuicaoSaldo() const = 0;

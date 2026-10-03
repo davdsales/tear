@@ -4,10 +4,6 @@
 
 #include <vector>
 #include <string>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
 #include "Estoque.h"
 
 // um item dentro de uma compra (quantidade e preco na unidade do estoque do material)
@@ -168,59 +164,80 @@ public:
         return true;
     }
 
-    // --- persistencia ---
-    // linha de compra:  C;id;fornecedor;data;confirmada
-    // linha de item:    I;idCompra;idMaterial;quantidade;preco
+    // --- persistencia no banco SQLite (tabelas compras e itens_compra), separado por usuario ---
 
-    void salvarEmArquivo(const std::string& nomeArquivo) const {
-        std::ofstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) {
-            std::cerr << "Erro ao abrir " << nomeArquivo << " para escrita!\n";
-            return;
-        }
-        for (const auto& c : compras) {
-            arquivo << "C;" << c.getId() << ";" << c.getFornecedor() << ";" << c.getData() << ";"
-                    << (c.isConfirmada() ? 1 : 0) << "\n";
-            for (const auto& item : c.getItens()) {
-                arquivo << "I;" << c.getId() << ";" << item.getIdMaterial() << ";"
-                        << item.getQuantidade() << ";" << item.getPrecoUnitario() << "\n";
-            }
-        }
-        arquivo.close();
+    static void criarTabelas(BancoDados& banco) {
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS compras ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id INTEGER NOT NULL,"
+            " fornecedor TEXT,"
+            " data TEXT NOT NULL,"
+            " confirmada INTEGER NOT NULL DEFAULT 0,"
+            " PRIMARY KEY (usuario_id, id))");
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS itens_compra ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id_compra INTEGER NOT NULL,"
+            " id_material INTEGER NOT NULL,"
+            " quantidade REAL NOT NULL,"
+            " preco_unitario REAL NOT NULL)");
     }
 
-    void carregarDeArquivo(const std::string& nomeArquivo) {
-        std::ifstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) return;
+    void salvarNoBanco(BancoDados& banco, int usuarioId) const {
+        banco.executar("BEGIN");
+        Consulta apagarItens(banco, "DELETE FROM itens_compra WHERE usuario_id = ?");
+        apagarItens.ligar(1, usuarioId);
+        apagarItens.executar();
+        Consulta apagarCompras(banco, "DELETE FROM compras WHERE usuario_id = ?");
+        apagarCompras.ligar(1, usuarioId);
+        apagarCompras.executar();
 
+        for (const auto& c : compras) {
+            Consulta insert(banco, "INSERT INTO compras (usuario_id, id, fornecedor, data, confirmada) VALUES (?, ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, c.getId());
+            insert.ligar(3, c.getFornecedor());
+            insert.ligar(4, c.getData());
+            insert.ligar(5, c.isConfirmada() ? 1 : 0);
+            insert.executar();
+
+            for (const auto& item : c.getItens()) {
+                Consulta insertItem(banco,
+                    "INSERT INTO itens_compra (usuario_id, id_compra, id_material, quantidade, preco_unitario) VALUES (?, ?, ?, ?, ?)");
+                insertItem.ligar(1, usuarioId);
+                insertItem.ligar(2, c.getId());
+                insertItem.ligar(3, item.getIdMaterial());
+                insertItem.ligar(4, item.getQuantidade());
+                insertItem.ligar(5, item.getPrecoUnitario());
+                insertItem.executar();
+            }
+        }
+        banco.executar("COMMIT");
+    }
+
+    void carregarDoBanco(BancoDados& banco, int usuarioId) {
         compras.clear();
         int maxId = 0;
-        std::string linha;
 
-        while (std::getline(arquivo, linha)) {
-            if (linha.empty()) continue;
-            std::vector<std::string> c = dividirCampos(linha);
-            try {
-                if (c[0] == "C" && c.size() >= 5) {
-                    int id = std::stoi(c[1]);
-                    compras.push_back(Compra(id, c[2], c[3], c[4] == "1"));
-                    if (id > maxId) maxId = id;
-                } else if (c[0] == "I" && c.size() >= 5) {
-                    Compra* compra = buscarPorId(std::stoi(c[1]));
-                    if (compra != nullptr) {
-                        compra->adicionarItem(ItemCompra(std::stoi(c[2]), std::stod(c[3]),
-                                                         std::stod(c[4])));
-                    }
-                }
-            } catch (const std::invalid_argument&) {
-                std::cerr << "Aviso: linha de compra com formato inválido ignorada.\n";
-            } catch (const std::out_of_range&) {
-                std::cerr << "Aviso: número fora do limite em compras ignorado.\n";
+        Consulta cs(banco, "SELECT id, fornecedor, data, confirmada FROM compras WHERE usuario_id = ? ORDER BY id");
+        cs.ligar(1, usuarioId);
+        while (cs.proximaLinha()) {
+            int id = cs.inteiro(0);
+            compras.push_back(Compra(id, cs.texto(1), cs.texto(2), cs.inteiro(3) == 1));
+            if (id > maxId) maxId = id;
+        }
+
+        Consulta itens(banco, "SELECT id_compra, id_material, quantidade, preco_unitario FROM itens_compra WHERE usuario_id = ?");
+        itens.ligar(1, usuarioId);
+        while (itens.proximaLinha()) {
+            Compra* compra = buscarPorId(itens.inteiro(0));
+            if (compra != nullptr) {
+                compra->adicionarItem(ItemCompra(itens.inteiro(1), itens.numero(2), itens.numero(3)));
             }
         }
 
         proximoId = maxId + 1;
-        arquivo.close();
     }
 };
 

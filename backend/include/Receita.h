@@ -20,8 +20,10 @@ class Receita : public transacao{
         }
         string getOrigem() const {
             return origem;
-}
-
-};    
+        }
+        void setOrigem(string novaOrigem){
+            origem = novaOrigem;
+        }
+};
 
 #endif

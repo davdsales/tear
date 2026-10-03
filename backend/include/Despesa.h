@@ -20,7 +20,10 @@ class Despesa : public transacao {
         }
         string getCategoria() const {
             return categoria;
-}
+        }
+        void setCategoria(string novaCategoria){
+            categoria = novaCategoria;
+        }
 };
 
 #endif

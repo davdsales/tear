@@ -5,28 +5,10 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
 #include <cmath>
 #include "Material.h"
 #include "MovimentacaoEstoque.h"
-
-// divide uma linha do .txt em campos, mantendo os campos vazios
-inline std::vector<std::string> dividirCampos(const std::string& linha) {
-    std::vector<std::string> campos;
-    std::string atual;
-    for (char c : linha) {
-        if (c == ';') {
-            campos.push_back(atual);
-            atual.clear();
-        } else {
-            atual += c;
-        }
-    }
-    campos.push_back(atual);
-    return campos;
-}
+#include "BancoDados.h"
 
 // guarda os materiais (por ponteiro, para o polimorfismo funcionar) e todas as movimentacoes.
 // o saldo nunca e um numero editavel: ele e sempre a soma das movimentacoes.
@@ -172,97 +154,131 @@ public:
         return total;
     }
 
-    // --- persistencia em arquivo texto (mesmo padrao do GerenciadorOrcamentos) ---
+    // --- persistencia no banco SQLite (tabelas materiais e movimentacoes) ---
+    // cada usuario tem o seu estoque: todas as linhas guardam o usuario_id
 
-    void salvarEmArquivo(const std::string& arquivoMateriais,
-                         const std::string& arquivoMovimentacoes) const {
-        std::ofstream arqMat(arquivoMateriais);
-        if (!arqMat.is_open()) {
-            std::cerr << "Erro ao abrir " << arquivoMateriais << " para escrita!\n";
-            return;
-        }
-        for (const Material* m : materiais) arqMat << m->serializar() << "\n";
-        arqMat.close();
-
-        std::ofstream arqMov(arquivoMovimentacoes);
-        if (!arqMov.is_open()) {
-            std::cerr << "Erro ao abrir " << arquivoMovimentacoes << " para escrita!\n";
-            return;
-        }
-        for (const auto& mov : movimentacoes) {
-            arqMov << mov.getId() << ";"
-                   << mov.getIdMaterial() << ";"
-                   << static_cast<int>(mov.getTipo()) << ";"
-                   << mov.getQuantidade() << ";"
-                   << mov.getData() << ";"
-                   << mov.getObservacao() << "\n";
-        }
-        arqMov.close();
+    static void criarTabelas(BancoDados& banco) {
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS materiais ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id INTEGER NOT NULL,"
+            " tipo TEXT NOT NULL CHECK (tipo IN ('FIO', 'TECIDO', 'AVIAMENTO')),"
+            " nome TEXT NOT NULL,"
+            " unidade TEXT NOT NULL,"
+            " custo_unitario REAL NOT NULL,"
+            " estoque_minimo REAL NOT NULL,"
+            " marca TEXT, cor TEXT, metragem REAL,"   // fio
+            " composicao TEXT, largura REAL,"         // tecido
+            " detalhe TEXT,"                          // aviamento
+            " PRIMARY KEY (usuario_id, id))");
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS movimentacoes ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id INTEGER NOT NULL,"
+            " id_material INTEGER NOT NULL,"
+            " tipo INTEGER NOT NULL,"                 // 0 entrada, 1 consumo, 2 ajuste
+            " quantidade REAL NOT NULL,"
+            " data TEXT NOT NULL,"
+            " observacao TEXT,"
+            " PRIMARY KEY (usuario_id, id))");
     }
 
-    void carregarDeArquivo(const std::string& arquivoMateriais,
-                           const std::string& arquivoMovimentacoes) {
+    // grava o estado atual inteiro do usuario (mesma ideia do antigo salvarEmArquivo)
+    void salvarNoBanco(BancoDados& banco, int usuarioId) const {
+        banco.executar("BEGIN");
+        Consulta apagarMovs(banco, "DELETE FROM movimentacoes WHERE usuario_id = ?");
+        apagarMovs.ligar(1, usuarioId);
+        apagarMovs.executar();
+        Consulta apagarMats(banco, "DELETE FROM materiais WHERE usuario_id = ?");
+        apagarMats.ligar(1, usuarioId);
+        apagarMats.executar();
+
+        for (const Material* m : materiais) {
+            Consulta insert(banco,
+                "INSERT INTO materiais (usuario_id, id, tipo, nome, unidade, custo_unitario, estoque_minimo,"
+                " marca, cor, metragem, composicao, largura, detalhe)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, m->getId());
+            insert.ligar(3, m->getTipo());
+            insert.ligar(4, m->getNome());
+            insert.ligar(5, m->getUnidade());
+            insert.ligar(6, m->getCustoUnitario());
+            insert.ligar(7, m->getEstoqueMinimo());
+            if (const Fio* f = dynamic_cast<const Fio*>(m)) {
+                insert.ligar(8, f->getMarca());
+                insert.ligar(9, f->getCor());
+                insert.ligar(10, f->getMetragem());
+            } else if (const Tecido* t = dynamic_cast<const Tecido*>(m)) {
+                insert.ligar(11, t->getComposicao());
+                insert.ligar(12, t->getLargura());
+            } else if (const Aviamento* a = dynamic_cast<const Aviamento*>(m)) {
+                insert.ligar(13, a->getDetalhe());
+            }
+            insert.executar();
+        }
+
+        for (const auto& mov : movimentacoes) {
+            Consulta insert(banco,
+                "INSERT INTO movimentacoes (usuario_id, id, id_material, tipo, quantidade, data, observacao)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, mov.getId());
+            insert.ligar(3, mov.getIdMaterial());
+            insert.ligar(4, static_cast<int>(mov.getTipo()));
+            insert.ligar(5, mov.getQuantidade());
+            insert.ligar(6, mov.getData());
+            insert.ligar(7, mov.getObservacao());
+            insert.executar();
+        }
+        banco.executar("COMMIT");
+    }
+
+    void carregarDoBanco(BancoDados& banco, int usuarioId) {
         limparMateriais();
         movimentacoes.clear();
         int maxIdMaterial = 0;
         int maxIdMov = 0;
 
-        std::ifstream arqMat(arquivoMateriais);
-        std::string linha;
-        while (arqMat.is_open() && std::getline(arqMat, linha)) {
-            if (linha.empty()) continue;
-            std::vector<std::string> c = dividirCampos(linha);
-            try {
-                // c: tipo;id;nome;unidade;custo;minimo;extras...
-                if (c.size() < 7) continue;
-                int id = std::stoi(c[1]);
-                double custo = std::stod(c[4]);
-                double minimo = std::stod(c[5]);
-                Material* m = nullptr;
+        Consulta mats(banco,
+            "SELECT id, tipo, nome, unidade, custo_unitario, estoque_minimo,"
+            " marca, cor, metragem, composicao, largura, detalhe FROM materiais"
+            " WHERE usuario_id = ? ORDER BY id");
+        mats.ligar(1, usuarioId);
+        while (mats.proximaLinha()) {
+            int id = mats.inteiro(0);
+            std::string tipo = mats.texto(1);
+            Material* m = nullptr;
 
-                if (c[0] == "FIO" && c.size() >= 9) {
-                    m = new Fio(id, c[2], c[3], custo, minimo, c[6], c[7], std::stod(c[8]));
-                } else if (c[0] == "TECIDO" && c.size() >= 8) {
-                    m = new Tecido(id, c[2], c[3], custo, minimo, c[6], std::stod(c[7]));
-                } else if (c[0] == "AVIAMENTO") {
-                    m = new Aviamento(id, c[2], c[3], custo, minimo, c[6]);
-                }
-
-                if (m != nullptr) {
-                    materiais.push_back(m);
-                    if (id > maxIdMaterial) maxIdMaterial = id;
-                }
-            } catch (const std::invalid_argument&) {
-                std::cerr << "Aviso: linha de material com formato inválido ignorada.\n";
-            } catch (const std::out_of_range&) {
-                std::cerr << "Aviso: número fora do limite em materiais ignorado.\n";
+            if (tipo == "FIO") {
+                m = new Fio(id, mats.texto(2), mats.texto(3), mats.numero(4), mats.numero(5),
+                            mats.texto(6), mats.texto(7), mats.numero(8));
+            } else if (tipo == "TECIDO") {
+                m = new Tecido(id, mats.texto(2), mats.texto(3), mats.numero(4), mats.numero(5),
+                               mats.texto(9), mats.numero(10));
+            } else if (tipo == "AVIAMENTO") {
+                m = new Aviamento(id, mats.texto(2), mats.texto(3), mats.numero(4), mats.numero(5),
+                                  mats.texto(11));
+            }
+            if (m != nullptr) {
+                materiais.push_back(m);
+                if (id > maxIdMaterial) maxIdMaterial = id;
             }
         }
-        arqMat.close();
 
-        std::ifstream arqMov(arquivoMovimentacoes);
-        while (arqMov.is_open() && std::getline(arqMov, linha)) {
-            if (linha.empty()) continue;
-            std::vector<std::string> c = dividirCampos(linha);
-            try {
-                // c: id;idMaterial;tipo;quantidade;data;observacao
-                if (c.size() < 6) continue;
-                int id = std::stoi(c[0]);
-                int idMaterial = std::stoi(c[1]);
-                int tipo = std::stoi(c[2]);
-                double qtd = std::stod(c[3]);
-                if (tipo < 0 || tipo > 2) continue;
-
-                movimentacoes.push_back(MovimentacaoEstoque(id, idMaterial,
-                                        static_cast<TipoMovimentacao>(tipo), qtd, c[4], c[5]));
-                if (id > maxIdMov) maxIdMov = id;
-            } catch (const std::invalid_argument&) {
-                std::cerr << "Aviso: linha de movimentação com formato inválido ignorada.\n";
-            } catch (const std::out_of_range&) {
-                std::cerr << "Aviso: número fora do limite em movimentações ignorado.\n";
-            }
+        Consulta movs(banco,
+            "SELECT id, id_material, tipo, quantidade, data, observacao FROM movimentacoes"
+            " WHERE usuario_id = ? ORDER BY id");
+        movs.ligar(1, usuarioId);
+        while (movs.proximaLinha()) {
+            int id = movs.inteiro(0);
+            int tipo = movs.inteiro(2);
+            if (tipo < 0 || tipo > 2) continue;
+            movimentacoes.push_back(MovimentacaoEstoque(id, movs.inteiro(1),
+                                    static_cast<TipoMovimentacao>(tipo), movs.numero(3),
+                                    movs.texto(4), movs.texto(5)));
+            if (id > maxIdMov) maxIdMov = id;
         }
-        arqMov.close();
 
         proximoIdMaterial = maxIdMaterial + 1;
         proximoIdMovimentacao = maxIdMov + 1;
