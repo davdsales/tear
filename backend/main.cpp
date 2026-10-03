@@ -48,12 +48,24 @@ int main() {
 
     httplib::Server svr;
 
+    // Trata requisições PREFLIGHT (OPTIONS)
+    svr.Options(".*", [](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        res.status = 200;
+    });
+
+    // Adiciona o cabeçalho de CORS globalmente (uma única vez por resposta)
+    svr.set_post_routing_handler([](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+    });
+
     // rotas de estoque e compras (ficam em RotasEstoque.h)
     registrarRotasEstoque(svr, estoque, listaCompras);
 
     // rota get para listar os pedidos em formato json para o kanban
     svr.Get("/api/pedidos", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
@@ -79,7 +91,6 @@ int main() {
 
     // rota post para receber os dados do react e criar novo orcamento e pedido
     svr.Post("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
@@ -117,7 +128,6 @@ int main() {
 
     // rota put para atualizar o status do pedido ao mover no kanban
     svr.Put(R"(/api/pedidos/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
 
@@ -149,7 +159,6 @@ int main() {
 
     // rota options para liberar requisicoes cors do navegador
     svr.Options(R"(/api/.*)", [](const httplib::Request&, httplib::Response& res) {
-        res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
         res.status = 200;

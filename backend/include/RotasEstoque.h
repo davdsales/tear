@@ -20,7 +20,6 @@ inline const std::string ARQUIVO_MOVIMENTACOES = "movimentacoes.txt";
 inline const std::string ARQUIVO_COMPRAS = "compras.txt";
 
 inline void cors(httplib::Response& res) {
-    res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.set_header("Access-Control-Allow-Headers", "Content-Type");
 }
