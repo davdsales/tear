@@ -29,8 +29,9 @@ function Compras() {
       ])
       setCompras(await resCompras.json())
       setMateriais(await resMat.json())
-    } catch {
-      setMensagem({ erro: true, texto: 'Não consegui falar com o servidor C++. Ele está rodando?' })
+    } catch (err) {
+    console.error("Erro na requisição carregar():", err)
+    setMensagem({ erro: true, texto: 'Não consegui falar com o servidor C++. Ele está rodando?' })
     }
   }
 
@@ -49,7 +50,8 @@ function Compras() {
       setMensagem({ erro: false, texto: textoOk })
       carregar()
       return true
-    } catch {
+    } catch (err) {
+      console.error("Erro na requisição enviar():", err)
       setMensagem({ erro: true, texto: 'Não consegui falar com o servidor C++. Ele está rodando?' })
       return false
     }
