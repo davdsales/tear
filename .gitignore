@@ -31,7 +31,6 @@ backend/database/*.sqlite
 backend/database/*.sqlite3
 !backend/database/schema.sql
 !backend/database/seed.sql
-backend/sqlite/
 backend/*.o
 # ==========================================
 # React / Node (frontend)
