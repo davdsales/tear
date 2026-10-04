@@ -1,5 +1,5 @@
-const CHAVE_LOGADO = 'tear_usuario'  
-const CHAVE_LISTA = 'tear_usuarios'   
+const CHAVE_LOGADO = 'tear_usuario'
+const API = 'http://localhost:8080'
 
 function ler(chave, padrao) {
   try {
@@ -14,31 +14,18 @@ function guardar(chave, valor) {
   try {
     localStorage.setItem(chave, JSON.stringify(valor))
   } catch {
-    
+
   }
 }
 
-
-export function salvarCadastro(nome, email) {
-  const usuario = { nome: nome.trim(), email: email.trim().toLowerCase() }
-  const lista = ler(CHAVE_LISTA, []).filter((u) => u.email !== usuario.email)
-  lista.push(usuario)
-  guardar(CHAVE_LISTA, lista)
-  guardar(CHAVE_LOGADO, usuario)
-  return usuario
-}
-
-export function entrarComEmail(email) {
-  const emailLimpo = email.trim().toLowerCase()
-  const encontrado = ler(CHAVE_LISTA, []).find((u) => u.email === emailLimpo)
- 
-  const usuario = encontrado || { nome: emailLimpo.split('@')[0], email: emailLimpo }
-  guardar(CHAVE_LOGADO, usuario)
-  return usuario
+// guarda no navegador quem esta logado (id, nome e e-mail vindos do banco)
+export function guardarLogin(usuario) {
+  guardar(CHAVE_LOGADO, { id: usuario.id, nome: usuario.nome, email: usuario.email })
 }
 
 export function usuarioLogado() {
-  return ler(CHAVE_LOGADO, null)
+  const usuario = ler(CHAVE_LOGADO, null)
+  return usuario && usuario.id ? usuario : null
 }
 
 export function sair() {
@@ -49,6 +36,24 @@ export function sair() {
   }
 }
 
+// toda requisicao para o C++ leva o id de quem esta logado,
+// assim o back devolve so os dados dessa conta
+const fetchOriginal = window.fetch.bind(window)
+
+window.fetch = async (url, opcoes = {}) => {
+  const usuario = usuarioLogado()
+  if (!String(url).startsWith(API) || !usuario) return fetchOriginal(url, opcoes)
+
+  const headers = { ...opcoes.headers, 'X-Usuario-Id': String(usuario.id) }
+  const res = await fetchOriginal(url, { ...opcoes, headers })
+
+  // a conta nao existe mais no banco: volta para o login
+  if (res.status === 401 && !String(url).includes('/api/login')) {
+    sair()
+    window.location.href = '/entrar'
+  }
+  return res
+}
 
 export function primeiroNome(nome) {
   return nome ? nome.trim().split(' ')[0] : ''

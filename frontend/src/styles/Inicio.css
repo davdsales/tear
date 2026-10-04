@@ -295,3 +295,9 @@ body {
   text-align: center !important;
   color: #7A6F63 !important;
 }
+
+.in-botao.pequeno { padding: 6px 12px; font-size: 13px; }
+.in-botao.perigo { color: #B3261E; }
+.in-acoes { white-space: nowrap; }
+.in-acoes button + button { margin-left: 8px; }
+.in-campo select:disabled { opacity: 0.6; }

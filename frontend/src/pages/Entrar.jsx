@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { entrarComEmail } from "../usuario.js";
+import { guardarLogin } from "../usuario.js";
 import "../styles/Entrar.css";
 
 import logo from "../assets/logo.png";
@@ -12,18 +12,26 @@ export default function Entrar() {
 
     const navigate = useNavigate();
 
-    function entrar(event) {
+    async function entrar(event) {
 
         event.preventDefault();
 
-        console.log({
-            email,
-            senha
-        });
-        entrarComEmail(email);
-        alert("Login realizado com sucesso!");
-
-        navigate("/inicio");
+        try {
+            const res = await fetch("http://localhost:8080/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, senha })
+            });
+            const resposta = await res.json();
+            if (!res.ok) {
+                alert(resposta.mensagem);
+                return;
+            }
+            guardarLogin(resposta);
+            navigate("/inicio");
+        } catch {
+            alert("Não consegui falar com o servidor C++. Ele está rodando?");
+        }
     }
 
     return (
