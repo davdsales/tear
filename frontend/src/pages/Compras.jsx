@@ -10,7 +10,7 @@ function dinheiro(valor) {
   return 'R$ ' + Number(valor).toFixed(2).replace('.', ',')
 }
 
-function Compras() {
+function Compras({ embutida = false }) {
   const [compras, setCompras] = useState([])
   const [materiais, setMateriais] = useState([])
   const [mensagem, setMensagem] = useState(null)
@@ -91,8 +91,8 @@ function Compras() {
 
   return (
     <div className="ec-pagina">
-      <div className="ec-topo">
-        <h1>Compras</h1>
+      <div className={'ec-topo' + (embutida ? ' ec-topo-direita' : '')}>
+        {!embutida && <h1>Compras</h1>}
         <button className="ec-botao" onClick={() => setMostrarNova(!mostrarNova)}>
           {mostrarNova ? 'Fechar' : '+ Nova compra'}
         </button>
