@@ -96,7 +96,7 @@ int main() {
         }
     });
 
-// rota put para atualizar o status do pedido ao mover no kanban
+    // rota put para atualizar o status do pedido ao mover no kanban
     svr.Put(R"(/api/pedidos/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
         DadosUsuario* d = sessoes.daRequisicao(req);
         if (!d) return semLogin(res);
@@ -104,26 +104,56 @@ int main() {
         try {
             int id = std::stoi(req.matches[1]);
             auto body = json::parse(req.body);
-            std::string novoStatus = body.value("status", "Em Aberto");
+            std::string novoStatus = body.value("status", "");
+
+            bool pedidoEncontrado = false;
+            bool statusValido = true;
 
             for (auto& pedido : d->pedidos) {
                 if (pedido.getId() == id) {
-                    if (novoStatus == "Em Produção") {
+                    pedidoEncontrado = true;
+                    if (novoStatus == "Em Aberto") {
+                        pedido.setStatus(StatusPedido::EM_ABERTO);
+                    } else if (novoStatus == "Aprovado") {
+                        pedido.setStatus(StatusPedido::APROVADO);
+                    } else if (novoStatus == "Em Produção") {
                         pedido.setStatus(StatusPedido::EM_PRODUCAO);
                     } else if (novoStatus == "Concluído") {
                         pedido.setStatus(StatusPedido::CONCLUIDO);
+                    } else if (novoStatus == "Cancelado") {
+                        pedido.setStatus(StatusPedido::CANCELADO);
                     } else {
-                        pedido.setStatus(StatusPedido::EM_ABERTO);
+                        statusValido = false;
                     }
                     break;
                 }
             }
+            if (!pedidoEncontrado) {
+                return responder(res, 404, {
+                    {"status", "erro"},
+                    {"mensagem", "Pedido nao encontrado"}
+                });
+            }
+            if (!statusValido) {
+                return responder(res, 400, {
+                    {"status", "erro"},
+                    {"mensagem", "Status invalido"}
+                });
+            }
             d->salvarPedidos(banco);
 
             std::cout << "\n[C++] Status do Pedido #" << id << " atualizado para: " << novoStatus << "\n";
-            responder(res, 200, {{"status", "sucesso"}});
+
+            responder(res, 200, {
+                {"status", "sucesso"},
+                {"novoStatus", novoStatus}
+            });
+
         } catch (const std::exception& e) {
-            responder(res, 400, {{"status", "erro"}});
+            responder(res, 400, {
+                {"status", "erro"},
+                {"mensagem", e.what()}
+            });
         }
     });
 

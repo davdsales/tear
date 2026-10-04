@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "C:/Users/LENOVO/tear/backend/sqlite/sqlite3.c" "CMakeFiles/sistema.dir/sqlite/sqlite3.c.obj" "gcc" "CMakeFiles/sistema.dir/sqlite/sqlite3.c.obj.d"
   "C:/Users/LENOVO/tear/backend/main.cpp" "CMakeFiles/sistema.dir/main.cpp.obj" "gcc" "CMakeFiles/sistema.dir/main.cpp.obj.d"
   )
 

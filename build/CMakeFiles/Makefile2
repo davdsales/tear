@@ -84,12 +84,12 @@ clean: CMakeFiles/sistema.dir/clean
 CMakeFiles/sistema.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\sistema.dir\build.make CMakeFiles/sistema.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\sistema.dir\build.make CMakeFiles/sistema.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\LENOVO\tear\build\CMakeFiles --progress-num=1,2 "Built target sistema"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\LENOVO\tear\build\CMakeFiles --progress-num=1,2,3 "Built target sistema"
 .PHONY : CMakeFiles/sistema.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/sistema.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\LENOVO\tear\build\CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\LENOVO\tear\build\CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/sistema.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\LENOVO\tear\build\CMakeFiles 0
 .PHONY : CMakeFiles/sistema.dir/rule
@@ -101,7 +101,7 @@ sistema: CMakeFiles/sistema.dir/rule
 # codegen rule for target.
 CMakeFiles/sistema.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\sistema.dir\build.make CMakeFiles/sistema.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\LENOVO\tear\build\CMakeFiles --progress-num=1,2 "Finished codegen for target sistema"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:\Users\LENOVO\tear\build\CMakeFiles --progress-num=1,2,3 "Finished codegen for target sistema"
 .PHONY : CMakeFiles/sistema.dir/codegen
 
 # clean rule for target.

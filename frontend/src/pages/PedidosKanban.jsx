@@ -1,69 +1,77 @@
 import React, { useEffect, useState } from 'react';
 
-// componente do quadro kanban com suporte a arrastar e soltar cartoes entre colunas
+// componente do quadro kanban com suporte a arrastar e soltar cartões entre colunas
 function PedidosKanban() {
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
-  // estados dos campos do formulario
-  const [cliente, setCliente] = useState('');
-  const [contato, setContato] = useState('');
-  const [materiais, setMateriais] = useState('');
-  const [maoDeObra, setMaoDeObra] = useState('');
+  // estados de busca e filtro do kanban
+  const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useState('Ativos');
 
-  // colunas fixas do fluxo de trabalho
-  const colunas = ['Em Aberto', 'Em Produção', 'Concluído'];
+  // todos os status possíveis de um pedido
+  const todasColunas = [
+    'Em Aberto',
+    'Aprovado',
+    'Em Produção',
+    'Concluído',
+    'Cancelado'
+  ];
 
-  // busca os pedidos cadastrados no backend c++
+  // define quais colunas serão exibidas de acordo com o filtro selecionado
+  const colunas =
+    filtro === 'Ativos'
+      ? ['Em Aberto', 'Aprovado', 'Em Produção']
+      : filtro === 'Concluídos'
+      ? ['Concluído']
+      : filtro === 'Cancelados'
+      ? ['Cancelado']
+      : todasColunas;
+
+  // filtra os pedidos pelo nome do cliente, contato ou ID
+  const pedidosFiltrados = pedidos.filter((pedido) => {
+    const termo = busca.trim().toLowerCase();
+
+    if (!termo) {
+      return true;
+    }
+
+    return (
+      pedido.cliente?.toLowerCase().includes(termo) ||
+      pedido.contato?.toLowerCase().includes(termo) ||
+      String(pedido.id).includes(termo)
+    );
+  });
+
+  // busca os pedidos cadastrados no backend C++
   const buscarPedidos = () => {
+    setCarregando(true);
+
     fetch('http://localhost:8080/api/pedidos')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Erro ao buscar pedidos');
+        }
+
+        return res.json();
+      })
       .then((data) => {
         setPedidos(data);
-        setCarregando(false);
       })
-      .catch((err) => console.error("Erro ao buscar pedidos:", err));
+      .catch((err) => {
+        console.error('Erro ao buscar pedidos:', err);
+      })
+      .finally(() => {
+        setCarregando(false);
+      });
   };
 
+  // busca os pedidos quando a página é carregada
   useEffect(() => {
     buscarPedidos();
   }, []);
 
-  // cria um novo pedido e recarrega a lista
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    const novoPedido = {
-      cliente,
-      contato,
-      materiais: parseFloat(materiais) || 0,
-      maoDeObra: parseFloat(maoDeObra) || 0,
-      adicionais: 0,
-      margem: 0.20,
-      desconto: 0,
-      status: 'Em Aberto'
-    };
-
-    fetch('http://localhost:8080/api/pedidos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(novoPedido)
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Erro na resposta do C++");
-        return res.json();
-      })
-      .then(() => {
-        setCliente('');
-        setContato('');
-        setMateriais('');
-        setMaoDeObra('');
-        buscarPedidos();
-      })
-      .catch(() => alert("Certifique-se de que o backend C++ (sistema.exe) está rodando!"));
-  };
-
-  // guarda o id do pedido transferido ao iniciar o arrasto
+  // guarda o ID do pedido transferido ao iniciar o arrasto
   const handleDragStart = (e, id) => {
     e.dataTransfer.setData('text/plain', String(id));
     e.dataTransfer.effectAllowed = 'move';
@@ -75,86 +83,161 @@ function PedidosKanban() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  // executa a movimentacao do card para a nova coluna
+  // movimenta o card para outra coluna e atualiza o backend
   const handleDrop = (e, novoStatus) => {
     e.preventDefault();
+
     const idStr = e.dataTransfer.getData('text/plain');
-    if (!idStr) return;
+
+    if (!idStr) {
+      return;
+    }
 
     const id = parseInt(idStr, 10);
 
-    // atualizacao visual imediata no estado local
-    setPedidos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: novoStatus } : p))
+    const pedidoAnterior = pedidos.find((pedido) => pedido.id === id);
+
+    if (!pedidoAnterior) {
+      return;
+    }
+
+    // evita fazer uma requisição desnecessária se o card for solto
+    // na própria coluna
+    if (pedidoAnterior.status === novoStatus) {
+      return;
+    }
+
+    // atualização visual imediata
+    setPedidos((pedidosAtuais) =>
+      pedidosAtuais.map((pedido) =>
+        pedido.id === id
+          ? { ...pedido, status: novoStatus }
+          : pedido
+      )
     );
 
-    // persiste a alteracao de status no backend c++
+    // persiste a alteração no backend
     fetch(`http://localhost:8080/api/pedidos/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: novoStatus })
-    }).catch((err) => {
-      console.error("Erro ao sincronizar status com C++:", err);
-    });
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: novoStatus
+      })
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Não foi possível atualizar o status do pedido');
+        }
+
+        return res.json();
+      })
+      .catch((err) => {
+        console.error('Erro ao sincronizar status com C++:', err);
+
+        // se o backend falhar, devolve o card para o status anterior
+        setPedidos((pedidosAtuais) =>
+          pedidosAtuais.map((pedido) =>
+            pedido.id === id
+              ? { ...pedido, status: pedidoAnterior.status }
+              : pedido
+          )
+        );
+      });
   };
 
   return (
-    <div style={{ fontFamily: '"DM Sans", sans-serif' }}>
-      <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', color: '#000000', fontFamily: '"DM Sans", sans-serif' }}>
-        Quadro de Pedidos (Kanban)
-      </h3>
+    <div
+      style={{
+        fontFamily: '"DM Sans", sans-serif'
+      }}
+    >
+      <h1
+        style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          marginBottom: '16px',
+          color: '#3d3229',
+          fontFamily: '"DM Sans", sans-serif'
+        }}
+      >
+        Fluxo de Pedidos
+      </h1>
 
-      {/* formulario de criacao do pedido */}
-      <form onSubmit={handleSubmit} style={{ background: '#FFF', padding: '16px 20px', borderRadius: '16px', border: '1px solid #F3EFEA', marginBottom: '30px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input 
-          type="text" 
-          placeholder="Nome do Cliente" 
-          value={cliente} 
-          onChange={(e) => setCliente(e.target.value)} 
-          required 
-          style={{ padding: '10px 14px', border: '1px solid #EFEAE4', borderRadius: '10px', fontSize: '14px', flex: 1, minWidth: '150px', outline: 'none', background: '#FAF8F5', fontFamily: '"DM Sans", sans-serif' }}
+      {/* busca e filtros */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '20px',
+          flexWrap: 'wrap'
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Buscar pedido..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          style={{
+            padding: '8px 14px',
+            borderRadius: '10px',
+            border: '1px solid #E5DED8',
+            fontSize: '14px',
+            minWidth: '220px',
+            outline: 'none',
+            fontFamily: '"DM Sans", sans-serif'
+          }}
         />
-        <input 
-          type="text" 
-          placeholder="Contato / Tel" 
-          value={contato} 
-          onChange={(e) => setContato(e.target.value)} 
-          style={{ padding: '10px 14px', border: '1px solid #EFEAE4', borderRadius: '10px', fontSize: '14px', flex: 1, minWidth: '130px', outline: 'none', background: '#FAF8F5', fontFamily: '"DM Sans", sans-serif' }}
-        />
-        <input 
-          type="number" 
-          placeholder="Materiais (R$)" 
-          value={materiais} 
-          onChange={(e) => setMateriais(e.target.value)} 
-          style={{ padding: '10px 14px', border: '1px solid #EFEAE4', borderRadius: '10px', fontSize: '14px', width: '120px', outline: 'none', background: '#FAF8F5', fontFamily: '"DM Sans", sans-serif' }}
-        />
-        <input 
-          type="number" 
-          placeholder="Mão de Obra (R$)" 
-          value={maoDeObra} 
-          onChange={(e) => setMaoDeObra(e.target.value)} 
-          style={{ padding: '10px 14px', border: '1px solid #EFEAE4', borderRadius: '10px', fontSize: '14px', width: '130px', outline: 'none', background: '#FAF8F5', fontFamily: '"DM Sans", sans-serif' }}
-        />
-        <button 
-          type="submit" 
-          style={{ padding: '10px 20px', background: '#D96B27', color: '#FFF', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
-        >
-          Criar Pedido
-        </button>
-      </form>
 
-      {/* colunas kanban */}
+        {['Ativos', 'Concluídos', 'Cancelados', 'Todos'].map((opcao) => (
+          <button
+            key={opcao}
+            type="button"
+            onClick={() => setFiltro(opcao)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid #E5DED8',
+              background: filtro === opcao ? '#D96B27' : '#FFFFFF',
+              color: filtro === opcao ? '#FFFFFF' : '#524B46',
+              cursor: 'pointer',
+              fontWeight: filtro === opcao ? 'bold' : 'normal',
+              fontFamily: '"DM Sans", sans-serif'
+            }}
+          >
+            {opcao}
+          </button>
+        ))}
+      </div>
+
+      {/* colunas do kanban */}
       {carregando ? (
-        <p style={{ color: '#786F6A' }}>Carregando dados do servidor C++...</p>
+        <p
+          style={{
+            color: '#786F6A'
+          }}
+        >
+          Carregando dados do servidor C++...
+        </p>
       ) : (
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: '10px' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '20px',
+            alignItems: 'flex-start',
+            overflowX: 'auto',
+            paddingBottom: '10px'
+          }}
+        >
           {colunas.map((colunaStatus) => {
-            const pedidosDaColuna = pedidos.filter(
-              (p) => (p.status || 'Em Aberto') === colunaStatus
+            const pedidosDaColuna = pedidosFiltrados.filter(
+              (pedido) =>
+                (pedido.status || 'Em Aberto') === colunaStatus
             );
 
             return (
-              <div 
+              <div
                 key={colunaStatus}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, colunaStatus)}
@@ -169,58 +252,154 @@ function PedidosKanban() {
                 }}
               >
                 {/* cabeçalho da coluna */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#2B231F' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '16px'
+                  }}
+                >
+                  <h4
+                    style={{
+                      margin: 0,
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#2B231F'
+                    }}
+                  >
                     {colunaStatus}
                   </h4>
-                  <span style={{ background: '#EAE5DF', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', color: '#524B46' }}>
+
+                  <span
+                    style={{
+                      background: '#EAE5DF',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: '#524B46'
+                    }}
+                  >
                     {pedidosDaColuna.length}
                   </span>
                 </div>
 
-                {/* conteiner interno de cartoes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '400px' }}>
-                  {pedidosDaColuna.map((p) => (
-                    <div 
-                      key={p.id}
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e, p.id)}
-                      style={{ 
-                        background: '#FFF', 
-                        padding: '16px', 
-                        borderRadius: '12px', 
-                        border: '1px solid #EFEAE4', 
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-                        cursor: 'grab',
-                        userSelect: 'none'
+                {/* cartões */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    minHeight: '400px'
+                  }}
+                >
+                  {pedidosDaColuna.length === 0 ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        color: '#A89F98',
+                        textAlign: 'center',
+                        paddingTop: '20px'
                       }}
                     >
-                      <div style={{ pointerEvents: 'none' }}>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold', color: '#000000' }}>
-                          {p.cliente}
-                        </h3>
-                        
-                        {p.descricao && (
-                          <p style={{ margin: '4px 0', fontSize: '13px', color: '#786F6A' }}>
-                            <strong>Descrição:</strong> {p.descricao}
-                          </p>
-                        )}
-                        
-                        {p.contato && (
-                          <p style={{ margin: '4px 0', fontSize: '13px', color: '#786F6A' }}>
-                            <strong>Contato:</strong> {p.contato}
-                          </p>
-                        )}
+                      Nenhum pedido nesta coluna.
+                    </p>
+                  ) : (
+                    pedidosDaColuna.map((pedido) => (
+                      <div
+                        key={pedido.id}
+                        draggable={true}
+                        onDragStart={(e) =>
+                          handleDragStart(e, pedido.id)
+                        }
+                        style={{
+                          background: '#FFF',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: '1px solid #EFEAE4',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                          cursor: 'grab',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <div
+                          style={{
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          <h3
+                            style={{
+                              margin: '0 0 8px 0',
+                              fontSize: '16px',
+                              fontWeight: 'bold',
+                              color: '#000000'
+                            }}
+                          >
+                            {pedido.cliente}
+                          </h3>
 
-                        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #F8F6F3' }}>
-                          <span style={{ fontSize: '11px', color: '#A89F98' }}>ID #{p.id}</span>
-                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#D96B27' }}>
-                            R$ {Number(p.valor || 0).toFixed(2)}
-                          </span>
+                          {pedido.descricao && (
+                            <p
+                              style={{
+                                margin: '4px 0',
+                                fontSize: '13px',
+                                color: '#786F6A'
+                              }}
+                            >
+                              <strong>Descrição:</strong>{' '}
+                              {pedido.descricao}
+                            </p>
+                          )}
+
+                          {pedido.contato && (
+                            <p
+                              style={{
+                                margin: '4px 0',
+                                fontSize: '13px',
+                                color: '#786F6A'
+                              }}
+                            >
+                              <strong>Contato:</strong>{' '}
+                              {pedido.contato}
+                            </p>
+                          )}
+
+                          <div
+                            style={{
+                              marginTop: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              paddingTop: '8px',
+                              borderTop: '1px solid #F8F6F3'
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                color: '#A89F98'
+                              }}
+                            >
+                              ID #{pedido.id}
+                            </span>
+
+                            <span
+                              style={{
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                color: '#D96B27'
+                              }}
+                            >
+                              R${' '}
+                              {Number(pedido.valor || 0).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             );

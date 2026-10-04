@@ -5,10 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
 
-# o SQLite vem como codigo-fonte (sqlite/sqlite3.c), entao nao precisa instalar nada
+# SQLite compilado junto com o projeto
 add_executable(sistema main.cpp sqlite/sqlite3.c)
 
-# httplib usa sockets do Windows
+# Configuração para Windows
 if(WIN32)
+    target_compile_definitions(sistema PRIVATE
+        _WIN32_WINNT=0x0A00
+        WINVER=0x0A00
+    )
+
     target_link_libraries(sistema ws2_32)
 endif()
