@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "../styles/Cadastro.css";
-import { salvarCadastro } from "../usuario.js";
+import { guardarLogin } from "../usuario.js";
 import logo from "../assets/logo.png";
 
 export default function Cadastro() {
@@ -14,7 +14,7 @@ export default function Cadastro() {
 
     const navigate = useNavigate();
 
-    function envio(event) {
+    async function envio(event) {
 
         event.preventDefault();
 
@@ -23,16 +23,23 @@ export default function Cadastro() {
             return;
         }
 
-        console.log({
-            nome,
-            email,
-            senha
-        });
-        
-        salvarCadastro(nome, email);
-        alert("Cadastro finalizado com sucesso!");
-
-        navigate("/inicio");
+        try {
+            const res = await fetch("http://localhost:8080/api/usuarios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome, email, senha })
+            });
+            const resposta = await res.json();
+            if (!res.ok) {
+                alert(resposta.mensagem);
+                return;
+            }
+            guardarLogin(resposta);
+            alert("Cadastro finalizado com sucesso!");
+            navigate("/inicio");
+        } catch {
+            alert("Não consegui falar com o servidor C++. Ele está rodando?");
+        }
     }
 
     return (

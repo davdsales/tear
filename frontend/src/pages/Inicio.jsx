@@ -30,6 +30,7 @@ function Inicio() {
   const [mensagem, setMensagem] = useState(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [nova, setNova] = useState(TRANSACAO_VAZIA)
+  const [editandoId, setEditandoId] = useState(null)
 
   useEffect(() => { carregar() }, [])
 
@@ -54,21 +55,60 @@ function Inicio() {
       tipo: nova.tipo,
       descricao: nova.descricao,
       valor: String(nova.valor).replace(',', '.'),
-      data: nova.data,
-      origem: nova.origem,
-      categoria: nova.categoria
+      data: nova.data
     }
+    if (nova.tipo === 'Receita') corpo.origem = nova.origem
+    else corpo.categoria = nova.categoria
+    const url = API + '/api/financeiro/transacoes' + (editandoId ? '/' + editandoId : '')
     try {
-      const res = await fetch(API + '/api/financeiro/transacoes', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method: editandoId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(corpo)
       })
       const resposta = await res.json()
       if (!res.ok) return setMensagem({ erro: true, texto: resposta.mensagem })
-      setMensagem({ erro: false, texto: 'Transação registrada.' })
-      setNova(TRANSACAO_VAZIA)
-      setMostrarForm(false)
+      setMensagem({ erro: false, texto: editandoId ? 'Transação atualizada.' : 'Transação registrada.' })
+      fecharForm()
+      carregar()
+    } catch {
+      setMensagem({ erro: true, texto: 'Não consegui falar com o servidor C++. Ele está rodando?' })
+    }
+  }
+
+  function abrirNova() {
+    setNova(TRANSACAO_VAZIA)
+    setEditandoId(null)
+    setMostrarForm(true)
+  }
+
+  function editar(t) {
+    setNova({
+      tipo: t.tipo,
+      descricao: t.descricao,
+      valor: String(t.valor).replace('.', ','),
+      data: t.data,
+      origem: t.origem || 'Encomenda',
+      categoria: t.categoria || 'Materiais'
+    })
+    setEditandoId(t.id)
+    setMostrarForm(true)
+  }
+
+  function fecharForm() {
+    setNova(TRANSACAO_VAZIA)
+    setEditandoId(null)
+    setMostrarForm(false)
+  }
+
+  async function excluir(t) {
+    if (!window.confirm(`Excluir "${t.descricao}"?`)) return
+    try {
+      const res = await fetch(API + '/api/financeiro/transacoes/' + t.id, { method: 'DELETE' })
+      const resposta = await res.json()
+      if (!res.ok) return setMensagem({ erro: true, texto: resposta.mensagem })
+      setMensagem({ erro: false, texto: 'Transação excluída.' })
+      if (editandoId === t.id) fecharForm()
       carregar()
     } catch {
       setMensagem({ erro: true, texto: 'Não consegui falar com o servidor C++. Ele está rodando?' })
@@ -122,15 +162,15 @@ function Inicio() {
 
       <div className="in-topo">
         <h4>Financeiro</h4>
-        <button className="in-botao" onClick={() => setMostrarForm(!mostrarForm)}>+ Nova transação</button>
+        <button className="in-botao" onClick={abrirNova}>+ Nova transação</button>
       </div>
 
       {mostrarForm && (
         <form className="in-card in-form" onSubmit={salvarTransacao}>
-          <h5>Nova transação</h5>
+          <h5>{editandoId ? 'Editar transação' : 'Nova transação'}</h5>
           <div className="in-grade">
             <label className="in-campo">Tipo
-              <select value={nova.tipo} onChange={e => setNova({ ...nova, tipo: e.target.value })}>
+              <select value={nova.tipo} disabled={editandoId !== null} onChange={e => setNova({ ...nova, tipo: e.target.value })}>
                 <option>Receita</option>
                 <option>Despesa</option>
               </select>
@@ -166,7 +206,7 @@ function Inicio() {
           </div>
           <div className="in-botoes">
             <button className="in-botao" type="submit">Salvar</button>
-            <button className="in-botao secundario" type="button" onClick={() => setMostrarForm(false)}>Cancelar</button>
+            <button className="in-botao secundario" type="button" onClick={fecharForm}>Cancelar</button>
           </div>
         </form>
       )}
@@ -226,11 +266,11 @@ function Inicio() {
         <h5>Últimas transações</h5>
         <table className="in-tabela">
           <thead>
-            <tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Origem/Categoria</th><th>Valor</th></tr>
+            <tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Origem/Categoria</th><th>Valor</th><th></th></tr>
           </thead>
           <tbody>
             {transacoes.length === 0 && (
-              <tr><td colSpan="5" className="in-vazio">Nenhuma transação registrada ainda.</td></tr>
+              <tr><td colSpan="6" className="in-vazio">Nenhuma transação registrada ainda.</td></tr>
             )}
             {transacoes.slice(0, 8).map(t => (
               <tr key={t.id}>
@@ -240,6 +280,10 @@ function Inicio() {
                 <td>{t.origem || t.categoria}</td>
                 <td className={t.tipo === 'Despesa' ? 'negativo' : ''}>
                   {t.tipo === 'Despesa' ? '− ' : ''}{dinheiro(t.valor)}
+                </td>
+                <td className="in-acoes">
+                  <button className="in-botao secundario pequeno" onClick={() => editar(t)}>Editar</button>
+                  <button className="in-botao secundario pequeno perigo" onClick={() => excluir(t)}>Excluir</button>
                 </td>
               </tr>
             ))}
