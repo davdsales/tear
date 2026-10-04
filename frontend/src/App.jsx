@@ -13,6 +13,8 @@ import PedidosKanban from './pages/PedidosKanban.jsx'
 
 import EmConstrucao from './components/EmConstrucao.jsx'
 
+import NovoOrcamento from './pages/NovoOrcamento.jsx'
+
 function App() {
 
   return (
@@ -62,6 +64,8 @@ function App() {
                   <Route path="/compras" element={<Compras />} />
 
                   <Route path="/pedidos" element={<PedidosKanban />} />
+
+                  <Route path="/orcamento" element={<NovoOrcamento />} />
 
                   <Route
                     path="/financeiro"
