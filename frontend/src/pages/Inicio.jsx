@@ -119,7 +119,7 @@ function Inicio() {
 
   return (
     <div className="inicio-conteudo">
-      <h3>Olá, {primeiroNome(usuario?.nome)} 👋</h3>
+      <h1>Olá, {primeiroNome(usuario?.nome)} 👋</h1>
       <p>Veja como está seu trabalho hoje.</p>
 
       {mensagem && <div className={'in-faixa ' + (mensagem.erro ? 'erro' : 'ok')}>{mensagem.texto}</div>}

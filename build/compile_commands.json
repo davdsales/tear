@@ -1,8 +1,14 @@
 [
 {
   "directory": "C:/Users/LENOVO/tear/build",
-  "command": "C:\\mingw64\\bin\\g++.exe  @CMakeFiles\\sistema.dir\\includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\sistema.dir\\main.cpp.obj -c C:\\Users\\LENOVO\\tear\\backend\\main.cpp",
+  "command": "C:\\mingw64\\bin\\g++.exe -DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 @CMakeFiles\\sistema.dir\\includes_CXX.rsp -g -std=gnu++17 -o CMakeFiles\\sistema.dir\\main.cpp.obj -c C:\\Users\\LENOVO\\tear\\backend\\main.cpp",
   "file": "C:/Users/LENOVO/tear/backend/main.cpp",
   "output": "CMakeFiles/sistema.dir/main.cpp.obj"
+},
+{
+  "directory": "C:/Users/LENOVO/tear/build",
+  "command": "C:\\mingw64\\bin\\gcc.exe -DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 @CMakeFiles\\sistema.dir\\includes_C.rsp -g -o CMakeFiles\\sistema.dir\\sqlite\\sqlite3.c.obj -c C:\\Users\\LENOVO\\tear\\backend\\sqlite\\sqlite3.c",
+  "file": "C:/Users/LENOVO/tear/backend/sqlite/sqlite3.c",
+  "output": "CMakeFiles/sistema.dir/sqlite/sqlite3.c.obj"
 }
 ]
