@@ -334,7 +334,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
                 }
             }
 
-            if (body.value("confirmar", false) && !listaCompras.confirmarCompra(id, estoque)) {
+            if (body.value("confirmar", false) && !listaCompras.confirmarCompra(id, estoque, dataDeHoje())) {
                 std::string erro = listaCompras.getUltimoErro();
                 listaCompras.removerCompra(id);
                 return responderErro(res, 400, erro);
@@ -354,7 +354,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
         ListaCompras& listaCompras = d->compras;
         int id = std::stoi(req.matches[1].str());
         if (listaCompras.buscarPorId(id) == nullptr) return responderErro(res, 404, "Compra não encontrada.");
-        if (!listaCompras.confirmarCompra(id, estoque)) return responderErro(res, 400, listaCompras.getUltimoErro());
+        if (!listaCompras.confirmarCompra(id, estoque, dataDeHoje())) return responderErro(res, 400, listaCompras.getUltimoErro());
         d->salvarEstoque(sessoes.getBanco());
         responder(res, 200, {{"status", "sucesso"}});
     });
