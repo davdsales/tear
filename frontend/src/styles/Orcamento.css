@@ -1,0 +1,76 @@
+/* David - complementa o estoqueCompras.css (usa as classes ec-*) */
+
+.orc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.orc-coluna { min-width: 0; }
+
+.orc-dica {
+  margin: 0;
+  font-size: 13px;
+  color: #7A6F63;
+}
+
+.orc-resumo {
+  position: sticky;
+  top: 24px;
+  background: #fff;
+  border: 1px solid #EDE7E0;
+  border-radius: 12px;
+  padding: 20px;
+  color: #3D3229;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.orc-resumo h2 { margin: 0 0 14px; font-size: 18px; }
+
+.orc-resumo dl { margin: 0; }
+
+.orc-resumo dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #EDE7E0;
+  font-size: 14px;
+}
+
+.orc-resumo dt { color: #7A6F63; }
+.orc-resumo dd { margin: 0; font-weight: 600; text-align: right; }
+
+.orc-total {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #FAF6F1;
+  border: 1px solid #C1502E;
+}
+
+.orc-total span { display: block; font-size: 13px; color: #7A6F63; }
+.orc-total strong { display: block; margin-top: 4px; font-size: 28px; color: #C1502E; }
+
+.orc-alerta {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #FCE8E6;
+  color: #B3261E;
+  font-size: 13px;
+}
+
+.ec-botao:disabled { opacity: 0.6; cursor: wait; }
+
+.ec-botao:focus-visible,
+.ec-campo input:focus-visible {
+  outline: 2px solid #C1502E;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .orc-layout { grid-template-columns: 1fr; }
+  .orc-resumo { position: static; order: -1; }
+}
