@@ -1,4 +1,3 @@
-// Maria Gabriela
 import React, { useState, useEffect } from 'react'
 import Compras from './Compras.jsx'
 import '../styles/estoqueCompras.css'

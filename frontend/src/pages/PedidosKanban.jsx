@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import '../styles/PedidosKanban.css';
 
 // componente do quadro kanban com suporte a arrastar e soltar cartões entre colunas
 function PedidosKanban() {
@@ -148,63 +149,25 @@ function PedidosKanban() {
   };
 
   return (
-    <div
-      style={{
-        fontFamily: '"DM Sans", sans-serif'
-      }}
-    >
-      <h1
-        style={{
-          fontSize: '28px',
-          fontWeight: 'bold',
-          marginBottom: '16px',
-          color: '#3d3229',
-          fontFamily: '"DM Sans", sans-serif'
-        }}
-      >
-        Fluxo de Pedidos
-      </h1>
+    <div className="pk-pagina">
+      <h1 className="pk-titulo">Fluxo de Pedidos</h1>
 
       {/* busca e filtros */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '20px',
-          flexWrap: 'wrap'
-        }}
-      >
+      <div className="pk-filtros">
         <input
           type="text"
+          className="pk-busca"
           placeholder="Buscar pedido..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          style={{
-            padding: '8px 14px',
-            borderRadius: '10px',
-            border: '1px solid #E5DED8',
-            fontSize: '14px',
-            minWidth: '220px',
-            outline: 'none',
-            fontFamily: '"DM Sans", sans-serif'
-          }}
         />
 
         {['Ativos', 'Concluídos', 'Cancelados', 'Todos'].map((opcao) => (
           <button
             key={opcao}
             type="button"
+            className={'pk-filtro' + (filtro === opcao ? ' ativo' : '')}
             onClick={() => setFiltro(opcao)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '10px',
-              border: '1px solid #E5DED8',
-              background: filtro === opcao ? '#D96B27' : '#FFFFFF',
-              color: filtro === opcao ? '#FFFFFF' : '#524B46',
-              cursor: 'pointer',
-              fontWeight: filtro === opcao ? 'bold' : 'normal',
-              fontFamily: '"DM Sans", sans-serif'
-            }}
           >
             {opcao}
           </button>
@@ -213,187 +176,58 @@ function PedidosKanban() {
 
       {/* colunas do kanban */}
       {carregando ? (
-        <p
-          style={{
-            color: '#786F6A'
-          }}
-        >
-          Carregando dados do servidor C++...
-        </p>
+        <p className="pk-carregando">Carregando dados do servidor C++...</p>
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            gap: '20px',
-            alignItems: 'flex-start',
-            overflowX: 'auto',
-            paddingBottom: '10px'
-          }}
-        >
+        <div className="pk-quadro">
           {colunas.map((colunaStatus) => {
             const pedidosDaColuna = pedidosFiltrados.filter(
-              (pedido) =>
-                (pedido.status || 'Em Aberto') === colunaStatus
+              (pedido) => (pedido.status || 'Em Aberto') === colunaStatus
             );
 
             return (
               <div
                 key={colunaStatus}
+                className="pk-coluna"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, colunaStatus)}
-                style={{
-                  background: '#F7F4EF',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  width: '300px',
-                  minHeight: '480px',
-                  flexShrink: 0,
-                  border: '2px dashed #E5DEC9'
-                }}
               >
                 {/* cabeçalho da coluna */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px'
-                  }}
-                >
-                  <h4
-                    style={{
-                      margin: 0,
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: '#2B231F'
-                    }}
-                  >
-                    {colunaStatus}
-                  </h4>
-
-                  <span
-                    style={{
-                      background: '#EAE5DF',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      color: '#524B46'
-                    }}
-                  >
-                    {pedidosDaColuna.length}
-                  </span>
+                <div className="pk-coluna-topo">
+                  <h4>{colunaStatus}</h4>
+                  <span className="pk-contador">{pedidosDaColuna.length}</span>
                 </div>
 
                 {/* cartões */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    minHeight: '400px'
-                  }}
-                >
+                <div className="pk-cartoes">
                   {pedidosDaColuna.length === 0 ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '13px',
-                        color: '#A89F98',
-                        textAlign: 'center',
-                        paddingTop: '20px'
-                      }}
-                    >
-                      Nenhum pedido nesta coluna.
-                    </p>
+                    <p className="pk-vazio">Nenhum pedido nesta coluna.</p>
                   ) : (
                     pedidosDaColuna.map((pedido) => (
                       <div
                         key={pedido.id}
+                        className="pk-cartao"
                         draggable={true}
-                        onDragStart={(e) =>
-                          handleDragStart(e, pedido.id)
-                        }
-                        style={{
-                          background: '#FFF',
-                          padding: '16px',
-                          borderRadius: '12px',
-                          border: '1px solid #EFEAE4',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-                          cursor: 'grab',
-                          userSelect: 'none'
-                        }}
+                        onDragStart={(e) => handleDragStart(e, pedido.id)}
                       >
-                        <div
-                          style={{
-                            pointerEvents: 'none'
-                          }}
-                        >
-                          <h3
-                            style={{
-                              margin: '0 0 8px 0',
-                              fontSize: '16px',
-                              fontWeight: 'bold',
-                              color: '#000000'
-                            }}
-                          >
-                            {pedido.cliente}
-                          </h3>
+                        <div className="pk-cartao-conteudo">
+                          <h3>{pedido.cliente}</h3>
 
                           {pedido.descricao && (
-                            <p
-                              style={{
-                                margin: '4px 0',
-                                fontSize: '13px',
-                                color: '#786F6A'
-                              }}
-                            >
-                              <strong>Descrição:</strong>{' '}
-                              {pedido.descricao}
+                            <p className="pk-info">
+                              <strong>Descrição:</strong> {pedido.descricao}
                             </p>
                           )}
 
                           {pedido.contato && (
-                            <p
-                              style={{
-                                margin: '4px 0',
-                                fontSize: '13px',
-                                color: '#786F6A'
-                              }}
-                            >
-                              <strong>Contato:</strong>{' '}
-                              {pedido.contato}
+                            <p className="pk-info">
+                              <strong>Contato:</strong> {pedido.contato}
                             </p>
                           )}
 
-                          <div
-                            style={{
-                              marginTop: '12px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              paddingTop: '8px',
-                              borderTop: '1px solid #F8F6F3'
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                color: '#A89F98'
-                              }}
-                            >
-                              ID #{pedido.id}
-                            </span>
-
-                            <span
-                              style={{
-                                fontSize: '14px',
-                                fontWeight: 'bold',
-                                color: '#D96B27'
-                              }}
-                            >
-                              R${' '}
-                              {Number(pedido.valor || 0).toFixed(2)}
+                          <div className="pk-rodape">
+                            <span className="pk-id">ID #{pedido.id}</span>
+                            <span className="pk-valor">
+                              R$ {Number(pedido.valor || 0).toFixed(2)}
                             </span>
                           </div>
                         </div>

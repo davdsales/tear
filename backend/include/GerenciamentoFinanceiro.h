@@ -101,7 +101,7 @@ class GerenciamentoFinanceiro{
 
 // CRUD
 
-        // create: grava no banco e usa o id gerado por ele; devolve 0 se der errado
+        // create: grava no banco e usa o id gerado por ele(devolve 0 se der errado)
         int adicionarReceita(const string& descricao, double valor, const string& data, const string& origem){
             if (!validar(descricao, valor)) return 0;
 

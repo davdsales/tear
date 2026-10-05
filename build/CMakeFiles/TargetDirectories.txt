@@ -1,3 +1,0 @@
-C:/Users/LENOVO/tear/build/CMakeFiles/sistema.dir
-C:/Users/LENOVO/tear/build/CMakeFiles/edit_cache.dir
-C:/Users/LENOVO/tear/build/CMakeFiles/rebuild_cache.dir

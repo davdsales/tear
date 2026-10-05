@@ -1,4 +1,3 @@
-// David
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/estoqueCompras.css'

@@ -1,4 +1,3 @@
-// Heloisa
 #ifndef _ROTAS_USUARIOS_H_
 #define _ROTAS_USUARIOS_H_
 
@@ -22,8 +21,7 @@ using rotas_estoque::lerTexto;
 inline std::string normalizarEmail(std::string email) {
     email.erase(0, email.find_first_not_of(' '));
     email.erase(email.find_last_not_of(' ') + 1);
-    std::transform(email.begin(), email.end(), email.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(email.begin(), email.end(), email.begin(),[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return email;
 }
 
