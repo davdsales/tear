@@ -1,1 +1,54 @@
-﻿.vscode/
+﻿# C++ / CMake (backend)
+/build/
+backend/build/
+backend/cmake-build-*/
+backend/CMakeFiles/
+backend/CMakeCache.txt
+backend/cmake_install.cmake
+backend/Makefile
+backend/*.o
+backend/*.obj
+backend/*.exe
+backend/*.out
+backend/*.a
+backend/*.so
+backend/*.dylib
+backend/*.dll
+backend/*.pdb
+backend/compile_commands.json
+
+# Banco de dados (SQLite): cada pessoa tem o seu
+backend/database/*.db
+backend/database/*.sqlite
+backend/database/*.sqlite3
+
+# React / Node (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Outros
+*.log
+.cache/

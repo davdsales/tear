@@ -1,116 +1,135 @@
+//David
 #ifndef _GERENCIADOR_ORCAMENTOS_H_
 #define _GERENCIADOR_ORCAMENTOS_H_
+
 #include <vector>
 #include <iostream>
-#include <fstream>
-#include <sstream>
+#include <iomanip>
 #include "Orcamento.h"
-using namespace std;
+#include "BancoDados.h"
 
+// classe que gerencia a lista de orcamentos e a tabela orcamentos do banco
 class GerenciadorOrcamentos {
 private:
-    vector<Orcamento> orcamentos;
+    std::vector<Orcamento> orcamentos;
     int proximoId;
 
 public:
+    // construtor comecando os ids em 1
     GerenciadorOrcamentos() : proximoId(1) {}
-    // adiciona um novo orçamento gerando um id automaticamente
-    void adicionarOrcamento(const Cliente& cliente, double custoMateriais, double custoMaoDeObra, double custoAdicionais, double margemLucro, double desconto) {
-        Orcamento novoOrcamento(proximoId++, cliente, custoMateriais, custoMaoDeObra, custoAdicionais, margemLucro, desconto);
+
+    // adiciona um novo orcamento no vector
+    void adicionarOrcamento(const Cliente& cliente, double custoMateriais, 
+                            double custoMaoDeObra, double custoAdicionais, 
+                            double margemLucro, double desconto) {
+        Orcamento novoOrcamento(proximoId++, cliente, custoMateriais, 
+                               custoMaoDeObra, custoAdicionais, 
+                               margemLucro, desconto);
         orcamentos.push_back(novoOrcamento);
-        cout << "Orcamento #" << novoOrcamento.getId() << " cadastrado com sucesso!\n";
+        std::cout << "\nOrçamento #" << novoOrcamento.getId() << " cadastrado com sucesso!\n";
     }
 
-    // buscar por id
+    // procura o orcamento pelo id
     Orcamento* buscarPorId(int id) {
         for (auto& orcamento : orcamentos) {
             if (orcamento.getId() == id) {
                 return &orcamento;
             }
         }
-        return nullptr; // não encontrado
+        return nullptr;
     }
 
-    // remover um orçamento pelo id
+    // apaga o orcamento do vector
     bool removerOrcamento(int id) {
-        for (auto i = orcamentos.begin(); i != orcamentos.end(); ++i) {
-            if (i->getId() == id) {
-                orcamentos.erase(i);
+        for (auto it = orcamentos.begin(); it != orcamentos.end(); ++it) {
+            if (it->getId() == id) {
+                orcamentos.erase(it);
                 return true;
             }
         }
         return false;
     }
 
-    // lista todos os orçamentos cadastrados
+    // imprime a lista de orcamentos no terminal
     void listarOrcamentos() const {
         if (orcamentos.empty()) {
-            cout << "Nenhum orcamento cadastrado.\n";
+            std::cout << "\nNenhum orçamento cadastrado.\n";
             return;
         }
 
-        cout << "\n================ LISTA DE ORCAMENTOS ================\n";
+        std::cout << "\n================ LISTA DE ORÇAMENTOS ================\n";
+        std::cout << std::fixed << std::setprecision(2);
         for (const auto& o : orcamentos) {
-            cout << "ID: " << o.getId() 
+            std::cout << "ID: " << o.getId() 
                       << " | Cliente: " << o.getCliente().getNome()
-                      << " | Custo Total: R$ " << o.calcularCustoTotal()
-                      << " | Preco Final: R$ " << o.calcularPrecoFinal()
+                      << " | Custo total: R$ " << o.calcularCustoTotal()
+                      << " | Preco final: R$ " << o.calcularPrecoFinal()
                       << " | Margem: " << o.calcularMargemPercentual() << "%\n";
         }
-        cout << "=====================================================\n";
+        std::cout << "=====================================================\n";
     }
 
-    // retorna todos os orçamentos (caso precise salvar em arquivo depois)
-    const vector<Orcamento>& getTodosOrcamentos() const {
+    // retorna a lista completa de orcamentos
+    const std::vector<Orcamento>& getTodosOrcamentos() const {
         return orcamentos;
     }
-    void salvarEmArquivo(const string& nomeArquivo) const {
-        ofstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) return;
-        for (const auto& o : orcamentos) {
-            arquivo << o.getId() << ";"
-                    << o.getCliente().getNome() << ";"
-                    << o.getCliente().getContato() << ";"
-                    << o.getCustoMateriais() << ";"
-                    << o.getCustoMaoDeObra() << ";"
-                    << o.getCustoAdicionais() << ";"
-                    << o.getMargemLucroDesejada() << ";"
-                    << o.getDesconto() << "\n";
-        }
-        arquivo.close();
+
+    static void criarTabela(BancoDados& banco) {
+        banco.executar(
+            "CREATE TABLE IF NOT EXISTS orcamentos ("
+            " usuario_id INTEGER NOT NULL REFERENCES usuarios(id),"
+            " id INTEGER NOT NULL,"
+            " cliente TEXT NOT NULL,"
+            " contato TEXT,"
+            " custo_materiais REAL NOT NULL,"
+            " custo_mao_de_obra REAL NOT NULL,"
+            " custo_adicionais REAL NOT NULL,"
+            " margem_lucro REAL NOT NULL,"
+            " desconto REAL NOT NULL,"
+            " PRIMARY KEY (usuario_id, id))");
     }
-    void carregarDeArquivo(const string& nomeArquivo) {
-        ifstream arquivo(nomeArquivo);
-        if (!arquivo.is_open()) return;
+
+    // grava os orcamentos do usuario na tabela (substitui o antigo salvarEmArquivo)
+    void salvarNoBanco(BancoDados& banco, int usuarioId) const {
+        banco.executar("BEGIN");
+        Consulta apagar(banco, "DELETE FROM orcamentos WHERE usuario_id = ?");
+        apagar.ligar(1, usuarioId);
+        apagar.executar();
+        for (const auto& o : orcamentos) {
+            Consulta insert(banco,
+                "INSERT INTO orcamentos (usuario_id, id, cliente, contato, custo_materiais, custo_mao_de_obra,"
+                " custo_adicionais, margem_lucro, desconto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            insert.ligar(1, usuarioId);
+            insert.ligar(2, o.getId());
+            insert.ligar(3, o.getCliente().getNome());
+            insert.ligar(4, o.getCliente().getContato());
+            insert.ligar(5, o.getCustoMateriais());
+            insert.ligar(6, o.getCustoMaoDeObra());
+            insert.ligar(7, o.getCustoAdicionais());
+            insert.ligar(8, o.getMargemLucroDesejada());
+            insert.ligar(9, o.getDesconto());
+            insert.executar();
+        }
+        banco.executar("COMMIT");
+    }
+
+    // le os orcamentos do usuario (substitui o antigo carregarDeArquivo)
+    void carregarDoBanco(BancoDados& banco, int usuarioId) {
         orcamentos.clear();
-        string linha;
         int maxId = 0;
-        while (getline(arquivo, linha)) {
-            if (linha.empty()) continue;
-            stringstream ss(linha);
-            string temp;
 
-            int id;
-            string nomeCliente, contatoCliente;
-            double mat, mao, adic, margem, desc;
-
-            getline(ss, temp, ';'); id = stoi(temp);
-            getline(ss, nomeCliente, ';');
-            getline(ss, contatoCliente, ';');
-            getline(ss, temp, ';'); mat = stod(temp);
-            getline(ss, temp, ';'); mao = stod(temp);
-            getline(ss, temp, ';'); adic = stod(temp);
-            getline(ss, temp, ';'); margem = stod(temp);
-            getline(ss, temp, ';'); desc = stod(temp);
-
-            Cliente c(0, nomeCliente, contatoCliente);
-            Orcamento o(id, c, mat, mao, adic, margem, desc);
-            orcamentos.push_back(o);
-
+        Consulta consulta(banco,
+            "SELECT id, cliente, contato, custo_materiais, custo_mao_de_obra, custo_adicionais,"
+            " margem_lucro, desconto FROM orcamentos WHERE usuario_id = ? ORDER BY id");
+        consulta.ligar(1, usuarioId);
+        while (consulta.proximaLinha()) {
+            int id = consulta.inteiro(0);
+            Cliente c(0, consulta.texto(1), consulta.texto(2));
+            orcamentos.push_back(Orcamento(id, c, consulta.numero(3), consulta.numero(4),
+                                           consulta.numero(5), consulta.numero(6), consulta.numero(7)));
             if (id > maxId) maxId = id;
         }
         proximoId = maxId + 1;
-        arquivo.close();
     }
 };
 

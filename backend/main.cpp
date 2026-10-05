@@ -1,112 +1,165 @@
+#include "httplib.h"
+#include "nlohmann/json.hpp"
 #include <iostream>
-#include <limits>
-#include "GerenciadorOrcamentos.h"
 
-using namespace std;
+#include "Cliente.h"
+#include "Orcamento.h"
+#include "Pedido.h"
+#include "ContextoUsuario.h"
+#include "RotasEstoque.h"
+#include "RotasFinanceiro.h"
+#include "RotasUsuarios.h"
 
-const string NOME_ARQUIVO = "orcamentos.txt";
+using json = nlohmann::json;
+using rotas_estoque::responder;
+using rotas_estoque::semLogin;
 
-void limparBuffer() {
-    cin.clear();
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-}
+// banco SQLite cada conta tem os seus proprios materiais, compras, orcamentos, pedidos e transacoes
+BancoDados banco("database/tear.db");
+SessaoUsuarios sessoes(banco);
 
 int main() {
-    GerenciadorOrcamentos gerenciador;
-    
-    // Leitura automatica do arquivo ao iniciar
-    gerenciador.carregarDeArquivo(NOME_ARQUIVO);
+    httplib::Server svr;
 
-    int opcao = -1;
+// Trata requisições 
+    svr.Options(".*", [](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type, X-Usuario-Id");
+        res.status = 200;
+    });
 
-    while (opcao != 0) {
-        cout << "\n======== SISTEMA DE GESTAO DE ORCAMENTOS ========\n";
-        cout << "1. Cadastrar novo orçamento\n";
-        cout << "2. Listar todos os orçamentos\n";
-        cout << "3. Buscar orçamento por ID\n";
-        cout << "4. Remover orçamento\n";
-        cout << "0. Salvar e sair\n";
-        cout << "Escolha uma opcão: ";
-        cin >> opcao;
-
-        if (cin.fail()) {
-            limparBuffer();
-            cout << "Opcao invalida! Digite apenas numeros.\n";
-            continue;
+// Adiciona o cabeçalho de CORS globalmente (uma única vez por resposta)
+    svr.set_post_routing_handler([](const httplib::Request& req, httplib::Response& res) {
+        if (!res.has_header("Access-Control-Allow-Origin")) {
+            res.set_header("Access-Control-Allow-Origin", "*");
         }
+    });
 
-        switch (opcao) {
-            case 1: {
-                string nome, contato;
-                double mat, mao, adic, margem, desc;
+    registrarRotasEstoque(svr, sessoes);
+    registrarRotasFinanceiro(svr, sessoes);
+    registrarRotasUsuarios(svr, banco);
 
-                limparBuffer();
-                cout << "\n--- CADASTRO DE ORÇAMENTO ---\n";
-                cout << "Nome do Cliente: ";
-                getline(cin, nome);
-                cout << "Contato (Telefone/Email): ";
-                getline(cin, contato);
+// rota get para listar os pedidos em formato json para o kanban
+    svr.Get("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
 
-                cout << "Custo de Materiais (R$): ";
-                cin >> mat;
-                cout << "Custo de Mao de Obra (R$): ";
-                cin >> mao;
-                cout << "Custos Adicionais (R$): ";
-                cin >> adic;
-                cout << "Margem de Lucro Desejada (ex: 0.20 para 20%): ";
-                cin >> margem;
-                cout << "Desconto (R$): ";
-                cin >> desc;
+        json listaJson = json::array();
+        for (const auto& pedido : d->pedidos) {
+            const auto& orcamento = pedido.getOrcamento();
+            const auto& cliente = orcamento.getCliente();
 
-                Cliente cliente(0, nome, contato);
-                gerenciador.adicionarOrcamento(cliente, mat, mao, adic, margem, desc);
-                break;
-            }
-            case 2:
-                gerenciador.listarOrcamentos();
-                break;
-
-            case 3: {
-                int id;
-                cout << "\nDigite o ID do Orçamento: ";
-                cin >> id;
-
-                Orcamento* o = gerenciador.buscarPorId(id);
-                if (o != nullptr) {
-                    cout << "\n--- ORÇAMENTO ENCONTRADO ---\n";
-                    cout << "ID: " << o->getId() << "\n";
-                    cout << "Cliente: " << o->getCliente().getNome() << "\n";
-                    cout << "Contato: " << o->getCliente().getContato() << "\n";
-                    cout << "Custo Total: R$ " << o->calcularCustoTotal() << "\n";
-                    cout << "Preco Bruto: R$ " << o->calcularPrecoBruto() << "\n";
-                    cout << "Preco Final: R$ " << o->calcularPrecoFinal() << "\n";
-                    cout << "Margem Efetiva: " << o->calcularMargemPercentual() << "%\n";
-                } else {
-                    cout << "\nOrçamento nao encontrado!\n";
-                }
-                break;
-            }
-            case 4: {
-                int id;
-                cout << "\nDigite o ID do Orçamento a remover: ";
-                cin >> id;
-
-                if (gerenciador.removerOrcamento(id)) {
-                    cout << "\nOrçamento #" << id << " removido com sucesso!\n";
-                } else {
-                    cout << "\nOrçamento nao encontrado!\n";
-                }
-                break;
-            }
-            case 0:
-                gerenciador.salvarEmArquivo(NOME_ARQUIVO);
-                cout << "\nDados salvos em '" << NOME_ARQUIVO << "'. Encerrando programa...\n";
-                break;
-
-            default:
-                cout << "\nOpcao invalida!\n";
-                break;
+            listaJson.push_back({
+                {"id", pedido.getId()},
+                {"cliente", cliente.getNome()},
+                {"contato", cliente.getContato()},
+                {"descricao", "Orçamento #" + std::to_string(orcamento.getId())},
+                {"valor", orcamento.calcularPrecoFinal()},
+                {"status", pedido.getStatusTexto()},
+                {"dataCriacao", pedido.getDataCriacao()}
+            });
         }
+        responder(res, 200, listaJson);
+    });
+
+// rota post para receber os dados do react e criar novo orcamento e pedido
+    svr.Post("/api/pedidos", [](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+
+        try {
+            auto body = json::parse(req.body);
+
+            std::string nomeCliente = body.value("cliente", "Cliente Anônimo");
+            std::string contato = body.value("contato", "");
+            double mat = body.value("materiais", 0.0);
+            double mao = body.value("maoDeObra", 0.0);
+            double adic = body.value("adicionais", 0.0);
+            double margem = body.value("margem", 0.20);
+            double desc = body.value("desconto", 0.0);
+
+// cria o cliente e o orcamento
+            Cliente novoCliente(0, nomeCliente, contato);
+            d->orcamentos.adicionarOrcamento(novoCliente, mat, mao, adic, margem, desc);
+
+// pega o ultimo orcamento criado para montar o pedido
+            const auto& ultimoOrcamento = d->orcamentos.getTodosOrcamentos().back();
+            Pedido novoPedido(d->proximoIdPedido++, ultimoOrcamento, StatusPedido::EM_ABERTO, rotas_estoque::dataDeHoje());
+            d->pedidos.push_back(novoPedido);
+            d->salvarPedidos(banco);
+
+            std::cout << "\n[C++] Novo Pedido #" << novoPedido.getId() << " cadastrado com sucesso via React!\n";
+            responder(res, 201, {{"status", "sucesso"}});
+        } catch (const std::exception& e) {
+            responder(res, 400, {{"status", "erro"}});
+        }
+    });
+
+    // rota put para atualizar o status do pedido ao mover no kanban
+    svr.Put(R"(/api/pedidos/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
+        DadosUsuario* d = sessoes.daRequisicao(req);
+        if (!d) return semLogin(res);
+
+        try {
+            int id = std::stoi(req.matches[1]);
+            auto body = json::parse(req.body);
+            std::string novoStatus = body.value("status", "");
+
+            bool pedidoEncontrado = false;
+            bool statusValido = true;
+
+            for (auto& pedido : d->pedidos) {
+                if (pedido.getId() == id) {
+                    pedidoEncontrado = true;
+                    if (novoStatus == "Em Aberto") {
+                        pedido.setStatus(StatusPedido::EM_ABERTO);
+                    } else if (novoStatus == "Aprovado") {
+                        pedido.setStatus(StatusPedido::APROVADO);
+                    } else if (novoStatus == "Em Produção") {
+                        pedido.setStatus(StatusPedido::EM_PRODUCAO);
+                    } else if (novoStatus == "Concluído") {
+                        pedido.setStatus(StatusPedido::CONCLUIDO);
+                    } else if (novoStatus == "Cancelado") {
+                        pedido.setStatus(StatusPedido::CANCELADO);
+                    } else {
+                        statusValido = false;
+                    }
+                    break;
+                }
+            }
+            if (!pedidoEncontrado) {
+                return responder(res, 404, {
+                    {"status", "erro"},
+                    {"mensagem", "Pedido nao encontrado"}
+                });
+            }
+            if (!statusValido) {
+                return responder(res, 400, {
+                    {"status", "erro"},
+                    {"mensagem", "Status invalido"}
+                });
+            }
+            d->salvarPedidos(banco);
+
+            std::cout << "\n[C++] Status do Pedido #" << id << " atualizado para: " << novoStatus << "\n";
+
+            responder(res, 200, {
+                {"status", "sucesso"},
+                {"novoStatus", novoStatus}
+            });
+
+        } catch (const std::exception& e) {
+            responder(res, 400, {
+                {"status", "erro"},
+                {"mensagem", e.what()}
+            });
+        }
+    });
+
+    std::cout << "Servidor Backend em C++ rodando em http://localhost:8080" << std::endl;
+    if (!svr.listen("0.0.0.0", 8080)) {
+        std::cout << "Nao consegui abrir a porta 8080. Feche o outro sistema.exe e tente de novo." << std::endl;
     }
 
     return 0;

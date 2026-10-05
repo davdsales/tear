@@ -1,1 +1,29 @@
-// Heloisa
+#ifndef _RECEITA_H_
+#define _RECEITA_H_
+
+#include <string>
+#include "Transacao.h"
+using namespace std;
+
+class Receita : public transacao{
+    private:
+        string origem; // venda, encomenda, serviço..
+    public:
+        Receita(int id, string descricao, double valor, string data, string origem ) : transacao(id, descricao, valor, data), origem(origem){
+
+        }
+        double ContribuicaoSaldo() const override {
+            return valor;
+        }
+        string getTipo() const override{
+            return "Receita";
+        }
+        string getOrigem() const {
+            return origem;
+        }
+        void setOrigem(string novaOrigem){
+            origem = novaOrigem;
+        }
+};
+
+#endif
