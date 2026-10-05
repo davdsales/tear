@@ -2,7 +2,6 @@
 #define _TRANSACAO_H_
 
 #include <string>
-#include <chrono>
 using namespace std;
 
 
@@ -11,7 +10,7 @@ class transacao{
         int id;
         string descricao;
         double valor;
-        string data; // Data no tipo chrono
+        string data; 
     public:
         transacao(int id, string descricao, double valor, string data): id(id), descricao(descricao), valor(valor), data(data) {}
         virtual ~ transacao() {} // Destrutor virtual das transaçôes no construtor
@@ -29,7 +28,8 @@ class transacao{
         string getData() const{
             return data;
         }
-                void setDescricao(string novaDescricao){
+        
+        void setDescricao(string novaDescricao){
             descricao = novaDescricao;
         }
         void setValor(double novoValor){

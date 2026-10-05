@@ -38,9 +38,9 @@ class BancoDados {
         int ultimoId(){ return static_cast<int>(sqlite3_last_insert_rowid(db)); }
 };
 
-// uma consulta preparada (INSERT, SELECT, UPDATE ou DELETE).
-// os valores entram com "?" no SQL e sao ligados com ligar(), o que evita SQL injection.
-// o destrutor libera a consulta sozinho.
+// uma consulta preparada (INSERT, SELECT, UPDATE ou DELETE)
+// os valores entram com "?" no SQL e sao ligados com ligar(), o que evita SQL injection
+// o destrutor libera a consulta sozinho
 class Consulta {
     private:
         sqlite3_stmt* stmt = nullptr;

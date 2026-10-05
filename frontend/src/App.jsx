@@ -7,7 +7,6 @@ import Entrar from './pages/Entrar.jsx'
 import Inicio from './pages/Inicio.jsx'
 
 import Estoque from './pages/Estoque.jsx'
-import Compras from './pages/Compras.jsx'
 import PedidosKanban from './pages/PedidosKanban.jsx'
 
 import NovoOrcamento from './pages/NovoOrcamento.jsx'
@@ -47,9 +46,8 @@ function App() {
 
                   <Route path="/inicio" element={<Inicio />} />
 
+                  {/* compras fica dentro de estoque, numa aba */}
                   <Route path="/estoque" element={<Estoque />} />
-
-                  <Route path="/compras" element={<Compras />} />
 
                   <Route path="/pedidos" element={<PedidosKanban />} />
 

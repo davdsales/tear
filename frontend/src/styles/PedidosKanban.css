@@ -1,0 +1,154 @@
+.pk-pagina {
+  font-family: "DM Sans", sans-serif;
+}
+
+.pk-titulo {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #3d3229;
+}
+
+/* busca e filtros */
+.pk-filtros {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pk-busca {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #E5DED8;
+  font-size: 14px;
+  min-width: 220px;
+  outline: none;
+  font-family: inherit;
+}
+
+.pk-filtro {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #E5DED8;
+  background: #FFFFFF;
+  color: #524B46;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pk-filtro.ativo {
+  background: #D96B27;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.pk-carregando {
+  color: #786F6A;
+}
+
+/* colunas */
+.pk-quadro {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.pk-coluna {
+  background: #F7F4EF;
+  border-radius: 16px;
+  padding: 16px;
+  width: 300px;
+  min-height: 480px;
+  flex-shrink: 0;
+  border: 2px dashed #E5DEC9;
+}
+
+.pk-coluna-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.pk-coluna-topo h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #2B231F;
+}
+
+.pk-contador {
+  background: #EAE5DF;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #524B46;
+}
+
+.pk-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 400px;
+}
+
+.pk-vazio {
+  margin: 0;
+  font-size: 13px;
+  color: #A89F98;
+  text-align: center;
+  padding-top: 20px;
+}
+
+/* cartao do pedido */
+.pk-cartao {
+  background: #FFF;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #EFEAE4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  cursor: grab;
+  user-select: none;
+}
+
+/* deixa o arrasto pegar o cartao inteiro, e nao o texto de dentro */
+.pk-cartao-conteudo {
+  pointer-events: none;
+}
+
+.pk-cartao h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #000000;
+}
+
+.pk-info {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #786F6A;
+}
+
+.pk-rodape {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #F8F6F3;
+}
+
+.pk-id {
+  font-size: 11px;
+  color: #A89F98;
+}
+
+.pk-valor {
+  font-size: 14px;
+  font-weight: bold;
+  color: #D96B27;
+}
