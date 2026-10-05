@@ -1,5 +1,6 @@
 // Maria Gabriela
 import React, { useState, useEffect } from 'react'
+import Compras from './Compras.jsx'
 import '../styles/estoqueCompras.css'
 
 const API = 'http://localhost:8080'
@@ -15,7 +16,14 @@ function dinheiro(valor) {
   return 'R$ ' + Number(valor).toFixed(2).replace('.', ',')
 }
 
-function Estoque() {
+// consumo aparece negativo, entrada positiva, e o ajuste mantém o sinal que foi digitado
+function comSinal(mov) {
+  const q = Number(mov.quantidade)
+  if (mov.tipo === 'Consumo') return '-' + Math.abs(q)
+  return q > 0 ? '+' + q : String(q)
+}
+
+function Materiais() {
   const [materiais, setMateriais] = useState([])
   const [resumo, setResumo] = useState({ totalMateriais: 0, abaixoDoMinimo: 0 })
   const [mensagem, setMensagem] = useState(null)
@@ -114,8 +122,7 @@ function Estoque() {
 
   return (
     <div className="ec-pagina">
-      <div className="ec-topo">
-        <h1>Estoque</h1>
+      <div className="ec-topo ec-topo-direita">
         <button className="ec-botao" onClick={() => setMostrarNovo(!mostrarNovo)}>
           {mostrarNovo ? 'Fechar' : '+ Novo material'}
         </button>
@@ -251,11 +258,11 @@ function Estoque() {
               {historico.lista.length === 0 && (
                 <tr><td colSpan="4" className="ec-vazio">Nenhuma movimentação ainda.</td></tr>
               )}
-              {historico.lista.map(h => (
+              {[...historico.lista].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).map(h => (
                 <tr key={h.id}>
                   <td>{h.data}</td>
                   <td>{h.tipo}</td>
-                  <td>{h.quantidade} {historico.material.unidade}</td>
+                  <td>{comSinal(h)} {historico.material.unidade}</td>
                   <td>{h.observacao || '—'}</td>
                 </tr>
               ))}
@@ -302,6 +309,28 @@ function Estoque() {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+// a tela de estoque tem duas abas: materiais e compras
+function Estoque() {
+  const [aba, setAba] = useState('materiais')
+
+  return (
+    <div className="ec-pagina">
+      <h1 className="ec-titulo">Estoque</h1>
+
+      <div className="ec-abas">
+        <button className={'ec-aba' + (aba === 'materiais' ? ' ativa' : '')} onClick={() => setAba('materiais')}>
+          Materiais
+        </button>
+        <button className={'ec-aba' + (aba === 'compras' ? ' ativa' : '')} onClick={() => setAba('compras')}>
+          Compras
+        </button>
+      </div>
+
+      {aba === 'materiais' ? <Materiais /> : <Compras embutida />}
     </div>
   )
 }
