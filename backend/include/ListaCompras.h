@@ -126,10 +126,11 @@ public:
         ultimoErro = "Compra #" + std::to_string(id) + " não encontrada.";
         return false;
     }
-
+    
     // compra -> entrada no estoque. Passa o Estoque por referencia para nao copiar nada.
     // primeiro valida tudo, depois aplica, para nao deixar a compra pela metade.
-    bool confirmarCompra(int id, Estoque& estoque) {
+    // dataEntrada: data em que a compra foi confirmada; se vier vazia, usa a data da compra.
+    bool confirmarCompra(int id, Estoque& estoque, const std::string& dataEntrada = "") {
         ultimoErro.clear();
         Compra* compra = buscarPorId(id);
         if (compra == nullptr) {
@@ -154,9 +155,10 @@ public:
 
         std::string obs = "Compra #" + std::to_string(compra->getId()) +
                           (compra->getFornecedor().empty() ? "" : " - " + compra->getFornecedor());
+        const std::string data = dataEntrada.empty() ? compra->getData() : dataEntrada;
         for (const auto& item : compra->getItens()) {
             estoque.registrarEntrada(item.getIdMaterial(), item.getQuantidade(),
-                                     compra->getData(), obs);
+                                     data, obs);
             // o custo do material passa a ser o preco da compra mais recente
             estoque.buscarPorId(item.getIdMaterial())->setCustoUnitario(item.getPrecoUnitario());
         }
