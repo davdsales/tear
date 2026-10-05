@@ -1,7 +1,5 @@
-﻿.vscode/
-# ==========================================
-# C++ / CMake (backend)
-# ==========================================
+﻿# C++ / CMake (backend)
+/build/
 backend/build/
 backend/cmake-build-*/
 backend/CMakeFiles/
@@ -19,56 +17,38 @@ backend/*.dll
 backend/*.pdb
 backend/compile_commands.json
 
-# arquivos de teste temporários (tipo o orcamentos.txt salvo pelo CLI)
-backend/*.txt
-!backend/**/README.txt
-
-# ==========================================
-# Banco de dados (SQLite)
-# ==========================================
+# Banco de dados (SQLite): cada pessoa tem o seu
 backend/database/*.db
 backend/database/*.sqlite
 backend/database/*.sqlite3
-!backend/database/schema.sql
-!backend/database/seed.sql
-backend/*.o
-# ==========================================
+
 # React / Node (frontend)
-# ==========================================
 frontend/node_modules/
 frontend/dist/
 frontend/build/
 frontend/.vite/
 frontend/*.local
-
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/pnpm-debug.log*
-
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
 backend/.env
 
-# ==========================================
 # Editores / IDEs
-# ==========================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# ==========================================
 # Sistema operacional
-# ==========================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ==========================================
 # Outros
-# ==========================================
 *.log
 .cache/

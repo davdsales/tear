@@ -6,12 +6,9 @@ import Cadastro from './pages/Cadastro.jsx'
 import Entrar from './pages/Entrar.jsx'
 import Inicio from './pages/Inicio.jsx'
 
-import Projetos from './pages/Projetos.jsx'
 import Estoque from './pages/Estoque.jsx'
 import Compras from './pages/Compras.jsx'
 import PedidosKanban from './pages/PedidosKanban.jsx'
-
-import EmConstrucao from './components/EmConstrucao.jsx'
 
 import NovoOrcamento from './pages/NovoOrcamento.jsx'
 
@@ -50,15 +47,6 @@ function App() {
 
                   <Route path="/inicio" element={<Inicio />} />
 
-                  <Route path="/projetos" element={<Projetos />} />
-
-                  <Route
-                    path="/projetos/:id"
-                    element={
-                      <EmConstrucao titulo="Detalhe do Projeto" />
-                    }
-                  />
-
                   <Route path="/estoque" element={<Estoque />} />
 
                   <Route path="/compras" element={<Compras />} />
@@ -66,13 +54,6 @@ function App() {
                   <Route path="/pedidos" element={<PedidosKanban />} />
 
                   <Route path="/orcamento" element={<NovoOrcamento />} />
-
-                  <Route
-                    path="/financeiro"
-                    element={
-                      <EmConstrucao titulo="Financeiro" />
-                    }
-                  />
 
                 </Routes>
 
