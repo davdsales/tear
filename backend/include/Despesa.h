@@ -6,14 +6,11 @@
 
 using namespace std;
 
-class Despesa : public transacao {
+class Despesa : public transacao { //Herda da classe mãe transação
     private:
-        string categoria;
+        string categoria; //No front se refere aos materiais
     public:
         Despesa(int id, string descricao, double valor, string data, string categoria ) : transacao(id, descricao, valor, data), categoria(categoria){
-        }
-        double ContribuicaoSaldo() const override {
-            return -valor;
         }
         string getTipo() const override{
             return "Despesa";

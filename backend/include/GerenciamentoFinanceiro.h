@@ -1,4 +1,3 @@
-// Heloisa
 #ifndef _GERENCIAMENTOFINANCEIRO_H_
 #define _GERENCIAMENTOFINANCEIRO_H_
 
@@ -17,13 +16,18 @@ using namespace std;
 class GerenciamentoFinanceiro{
 
     private:
+        //As listas são ponteiros, pois são criadas como New 
+        // Assim a informação não irá morrer, pois ficara armazenada no heap área da memória
+        // E só poderá ser apagado com delete
         vector<Receita*> receitas;
         vector<Despesa*> despesas;
         BancoDados* banco = nullptr;
         int usuarioId = 0;
         string ultimoErro;
 
-        bool validar(const string& descricao, double valor){
+        // Confere se é possível salvar no banco, se caso não der guarda o motivo
+        // Ele confere conexão, se a descrição foi preenchida e se o valor é maior que zero
+        bool validar(const string& descricao, double valor){ 
             ultimoErro.clear();
             if (!banco) ultimoErro = "Banco de dados não conectado.";
             else if (descricao.empty()) ultimoErro = "Preencha a descrição.";
@@ -31,6 +35,7 @@ class GerenciamentoFinanceiro{
             return ultimoErro.empty();
         }
 
+        // Ele limpa evita vazamento de memória quando necessário através do delete
         void limpar(){
             for (Receita* receita : receitas) delete receita;
             for (Despesa* despesa : despesas) delete despesa;
@@ -38,13 +43,14 @@ class GerenciamentoFinanceiro{
             despesas.clear();
         }
 
+        // procura a transação pelo id (pode ser receita ou despesa)
         transacao* buscarPorId(int id){
             for (Receita* receita : receitas) if (receita->getId() == id) return receita;
             for (Despesa* despesa : despesas) if (despesa->getId() == id) return despesa;
             return nullptr;
         }
 
-        // le todas as linhas da tabela e recria os objetos
+        // lê todas as linhas da tabela e recria os objetos
         void carregarDoBanco(){
             limpar();
             Consulta consulta(*banco, "SELECT id, tipo, descricao, valor, data, origem, categoria FROM transacoes WHERE usuario_id = ?");
@@ -147,7 +153,7 @@ class GerenciamentoFinanceiro{
             return todas;
         }
 
-        // update: o tipo nao muda; receita usa a origem e despesa usa a categoria
+        // update: o tipo nao muda, receita usa a origem e despesa usa a categoria
         bool editarTransacao(int id, const string& descricao, double valor, const string& data,
                              const string& origem, const string& categoria){
             if (!validar(descricao, valor)) return false;

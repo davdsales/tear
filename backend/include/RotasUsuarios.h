@@ -32,7 +32,7 @@ inline void registrarRotasUsuarios(httplib::Server& svr, BancoDados& banco) {
 
     // a tabela usuarios e criada pelo SessaoUsuarios (ContextoUsuario.h)
 
-    // cadastro: { nome, email, senha }
+    // cadastro (nome, email, senha)
     svr.Post("/api/usuarios", [&banco](const httplib::Request& req, httplib::Response& res) {
         try {
             json body = json::parse(req.body);
@@ -59,7 +59,7 @@ inline void registrarRotasUsuarios(httplib::Server& svr, BancoDados& banco) {
         }
     });
 
-    // login: { email, senha }
+    // login (email, senha)
     svr.Post("/api/login", [&banco](const httplib::Request& req, httplib::Response& res) {
         try {
             json body = json::parse(req.body);

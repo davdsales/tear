@@ -2,27 +2,33 @@ import React, { useState, useEffect } from 'react'
 import Compras from './Compras.jsx'
 import '../styles/estoqueCompras.css'
 
+// endereço do servidor em C++
 const API = 'http://localhost:8080'
 
+// formulário em branco de material novo
 const MATERIAL_VAZIO = {
   tipo: 'FIO', nome: '', unidade: 'g', custoUnitario: '', estoqueMinimo: '', estoqueInicial: '',
   marca: '', cor: '', metragem: '', composicao: '', largura: '', detalhe: ''
 }
 
+// unidade que já vem escolhida para cada tipo de material
 const UNIDADE_PADRAO = { FIO: 'g', TECIDO: 'm', AVIAMENTO: 'un' }
 
+// mostra o número como dinheiro tipo R$ 12,50
 function dinheiro(valor) {
   return 'R$ ' + Number(valor).toFixed(2).replace('.', ',')
 }
 
-// consumo aparece negativo, entrada positiva, e o ajuste mantém o sinal que foi digitado
+// consumo aparece com menos e entrada com mais e o ajuste fica como foi digitado
 function comSinal(mov) {
   const q = Number(mov.quantidade)
   if (mov.tipo === 'Consumo') return '-' + Math.abs(q)
   return q > 0 ? '+' + q : String(q)
 }
 
+// aba de materiais com a lista e os formulários
 function Materiais() {
+  // guardam as informações da tela
   const [materiais, setMateriais] = useState([])
   const [resumo, setResumo] = useState({ totalMateriais: 0, abaixoDoMinimo: 0 })
   const [mensagem, setMensagem] = useState(null)
@@ -32,8 +38,10 @@ function Materiais() {
   const [edicao, setEdicao] = useState(null)
   const [historico, setHistorico] = useState(null)
 
+  // busca os dados assim que a tela abre
   useEffect(() => { carregar() }, [])
 
+  // pede ao servidor a lista de materiais e o resumo ao mesmo tempo
   async function carregar() {
     try {
       const [resMat, resResumo] = await Promise.all([
@@ -47,7 +55,7 @@ function Materiais() {
     }
   }
 
-  // manda a requisicao e mostra a mensagem que o backend devolver
+  // manda o pedido para o servidor e mostra a mensagem de certo ou de erro
   async function enviar(url, metodo, corpo, textoOk) {
     try {
       const res = await fetch(API + url, {
@@ -69,12 +77,14 @@ function Materiais() {
     }
   }
 
+  // muda um campo do material novo e se trocar o tipo troca a unidade também
   function mudarNovo(campo, valor) {
     const atualizado = { ...novo, [campo]: valor }
     if (campo === 'tipo') atualizado.unidade = UNIDADE_PADRAO[valor]
     setNovo(atualizado)
   }
 
+  // salva o material novo e se der certo limpa o formulário
   async function salvarNovo(e) {
     e.preventDefault()
     if (await enviar('/api/materiais', 'POST', novo, 'Material cadastrado.')) {
@@ -83,6 +93,7 @@ function Materiais() {
     }
   }
 
+  // registra uma entrada consumo ou ajuste no estoque
   async function salvarMovimentacao(e) {
     e.preventDefault()
     const corpo = { idMaterial: mov.material.id, tipo: mov.tipo, quantidade: mov.quantidade, observacao: mov.observacao }
@@ -91,6 +102,7 @@ function Materiais() {
     }
   }
 
+  // salva o que foi mudado no material
   async function salvarEdicao(e) {
     e.preventDefault()
     const corpo = {
@@ -104,6 +116,7 @@ function Materiais() {
     }
   }
 
+  // busca todas as movimentações de um material
   async function verHistorico(m) {
     try {
       const res = await fetch(API + '/api/estoque/movimentacoes?idMaterial=' + m.id)
@@ -113,27 +126,33 @@ function Materiais() {
     }
   }
 
+  // pergunta antes de apagar o material
   function excluir(m) {
     if (window.confirm('Excluir "' + m.nome + '"?')) {
       enviar('/api/materiais/' + m.id, 'DELETE', null, 'Material excluído.')
     }
   }
 
+  // o que aparece na tela
   return (
     <div className="ec-pagina">
+      {/* botão que abre e fecha o formulário de material novo */}
       <div className="ec-topo ec-topo-direita">
         <button className="ec-botao" onClick={() => setMostrarNovo(!mostrarNovo)}>
           {mostrarNovo ? 'Fechar' : '+ Novo material'}
         </button>
       </div>
 
+      {/* aviso de sucesso ou de erro */}
       {mensagem && <div className={'ec-aviso' + (mensagem.erro ? '' : ' ok')}>{mensagem.texto}</div>}
 
+      {/* cards com o total de materiais e quantos estão com estoque baixo */}
       <div className="ec-resumo">
         <div className="ec-card"><span>Materiais cadastrados</span><strong>{resumo.totalMateriais}</strong></div>
         <div className="ec-card"><span>Itens com estoque baixo</span><strong>{resumo.abaixoDoMinimo}</strong></div>
       </div>
 
+      {/* formulário de material novo */}
       {mostrarNovo && (
         <form className="ec-form" onSubmit={salvarNovo}>
           <h2>Novo material</h2>
@@ -161,6 +180,7 @@ function Materiais() {
               <input type="number" step="any" min="0" value={novo.estoqueInicial} onChange={e => mudarNovo('estoqueInicial', e.target.value)} />
             </label>
 
+            {/* os campos de baixo mudam conforme o tipo escolhido */}
             {novo.tipo === 'FIO' && (
               <>
                 <label className="ec-campo">Marca
@@ -197,6 +217,7 @@ function Materiais() {
         </form>
       )}
 
+      {/* formulário para movimentar o estoque de um material */}
       {mov && (
         <form className="ec-form" onSubmit={salvarMovimentacao}>
           <h2>Movimentar: {mov.material.descricao}</h2>
@@ -222,6 +243,7 @@ function Materiais() {
         </form>
       )}
 
+      {/* formulário para editar um material */}
       {edicao && (
         <form className="ec-form" onSubmit={salvarEdicao}>
           <h2>Editar: {edicao.descricao}</h2>
@@ -246,6 +268,7 @@ function Materiais() {
         </form>
       )}
 
+      {/* histórico de movimentações de um material */}
       {historico && (
         <div className="ec-form">
           <h2>Histórico: {historico.material.descricao}</h2>
@@ -257,6 +280,7 @@ function Materiais() {
               {historico.lista.length === 0 && (
                 <tr><td colSpan="4" className="ec-vazio">Nenhuma movimentação ainda.</td></tr>
               )}
+              {/* mostra da mais recente para a mais antiga */}
               {[...historico.lista].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).map(h => (
                 <tr key={h.id}>
                   <td>{h.data}</td>
@@ -273,6 +297,7 @@ function Materiais() {
         </div>
       )}
 
+      {/* tabela com todos os materiais */}
       <table className="ec-tabela">
         <thead>
           <tr>
@@ -283,12 +308,14 @@ function Materiais() {
           {materiais.length === 0 && (
             <tr><td colSpan="6" className="ec-vazio">Nenhum material cadastrado ainda.</td></tr>
           )}
+          {/* uma linha para cada material com o saldo e os botões */}
           {materiais.map(m => (
             <tr key={m.id}>
               <td>{m.descricao}</td>
               <td>{m.tipo}</td>
               <td>
                 {m.saldo} {m.unidade}{' '}
+                {/* etiqueta vermelha se estiver abaixo do mínimo */}
                 <span className={'ec-etiqueta ' + (m.abaixoDoMinimo ? 'baixo' : 'ok')}>
                   {m.abaixoDoMinimo ? 'Baixo' : 'OK'}
                 </span>
@@ -312,7 +339,7 @@ function Materiais() {
   )
 }
 
-// a tela de estoque tem duas abas: materiais e compras
+// tela de estoque com duas abas materiais e compras
 function Estoque() {
   const [aba, setAba] = useState('materiais')
 
@@ -320,6 +347,7 @@ function Estoque() {
     <div className="ec-pagina">
       <h1 className="ec-titulo">Estoque</h1>
 
+      {/* botões das abas */}
       <div className="ec-abas">
         <button className={'ec-aba' + (aba === 'materiais' ? ' ativa' : '')} onClick={() => setAba('materiais')}>
           Materiais
@@ -329,6 +357,7 @@ function Estoque() {
         </button>
       </div>
 
+      {/* mostra a aba escolhida */}
       {aba === 'materiais' ? <Materiais /> : <Compras embutida />}
     </div>
   )

@@ -4,9 +4,10 @@
 #include <string>
 using namespace std;
 
-
+// A classe transacao representa qualquer movimetação finaceira 
+// Ela é a classe mãe e possuí método virtual
 class transacao{
-    protected:
+    protected: // Foi usado protected para que as classes filhas pudessem utilizar os atributos privados 
         int id;
         string descricao;
         double valor;
@@ -40,8 +41,7 @@ class transacao{
         }
 
 
-        // Método virtual saldo
-        virtual double ContribuicaoSaldo() const = 0;
+        // Método que define se a transação é receita ou despesa
         virtual string getTipo() const = 0;
 };
 

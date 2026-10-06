@@ -5,6 +5,7 @@ import '../styles/Orcamento.css'
 
 const API = 'http://localhost:8080'
 
+// formulário em branco
 const FORM_VAZIO = {
   cliente: '',
   contato: '',
@@ -23,12 +24,13 @@ function percentual(valor) {
   return Number(valor).toFixed(1).replace('.', ',') + '%'
 }
 
+// transforma o texto digitado em número e aceita vírgula
 function numero(texto) {
   const n = Number(String(texto).replace(',', '.'))
   return Number.isFinite(n) ? n : 0
 }
 
-// mesmas contas do Orcamento.h, para o cliente ver o preco antes de salvar
+// faz as mesmas contas do Orcamento.h para mostrar o preço antes de salvar
 function calcular(form) {
   const materiais = numero(form.materiais)
   const maoDeObra = numero(form.maoDeObra)
@@ -45,6 +47,7 @@ function calcular(form) {
   return { custoTotal, precoBruto, precoFinal, lucro, margemReal, desconto }
 }
 
+// tela de criar orçamento
 function NovoOrcamento() {
   const [form, setForm] = useState({ ...FORM_VAZIO })
   const [mensagem, setMensagem] = useState(null)
@@ -56,7 +59,7 @@ function NovoOrcamento() {
     setForm({ ...form, [campo]: valor })
   }
 
-  // devolve o texto do primeiro problema encontrado, ou null se esta tudo certo
+  // confere se está tudo preenchido e devolve o erro se tiver algum
   function validar() {
     if (!form.cliente.trim()) return 'Informe o nome do cliente.'
     const campos = ['materiais', 'maoDeObra', 'adicionais', 'margem', 'desconto']
@@ -67,6 +70,7 @@ function NovoOrcamento() {
     return null
   }
 
+  // confere os dados e manda o orçamento para o servidor
   async function salvar(e) {
     e.preventDefault()
     const problema = validar()
@@ -86,7 +90,7 @@ function NovoOrcamento() {
           materiais: numero(form.materiais),
           maoDeObra: numero(form.maoDeObra),
           adicionais: numero(form.adicionais),
-          // o backend guarda a margem como fracao (0.20 = 20%)
+          // o servidor guarda a margem como 0.20 em vez de 20
           margem: numero(form.margem) / 100,
           desconto: numero(form.desconto)
         })
@@ -106,6 +110,7 @@ function NovoOrcamento() {
     }
   }
 
+  // avisos que aparecem no resumo
   const vendeAbaixoDoCusto = resumo.custoTotal > 0 && resumo.lucro < 0
   const descontoMaiorQuePreco = resumo.desconto > resumo.precoBruto && resumo.precoBruto > 0
 
@@ -221,6 +226,7 @@ function NovoOrcamento() {
           </div>
         </div>
 
+        {/* resumo que atualiza enquanto a pessoa digita */}
         <aside className="orc-resumo" aria-live="polite">
           <h2>Resumo</h2>
 

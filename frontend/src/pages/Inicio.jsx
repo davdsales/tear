@@ -6,23 +6,30 @@ import imgReceber from '../assets/img_receber.png'
 import imgAndamento from '../assets/img_andamento.png'
 import imgEstoque from '../assets/img_estoque.png'
 
+// endereço do servidor em C++
 const API = 'http://localhost:8080'
 
+// data de hoje no formato do banco tipo 2026-10-06
 function hoje() {
-  return new Date().toLocaleDateString('en-CA') // AAAA-MM-DD
+  return new Date().toLocaleDateString('en-CA')
 }
 
+// formulário em branco de transação nova
 const TRANSACAO_VAZIA = { tipo: 'Receita', descricao: '', valor: '', data: hoje(), origem: 'Encomenda', categoria: 'Materiais' }
 
+// mostra o número como dinheiro tipo R$ 12,50
 function dinheiro(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// troca 2026-10-06 por 06/10/2026
 function dataBR(data) {
   return data.split('-').reverse().join('/')
 }
 
+// tela inicial com os cards o financeiro e as últimas transações
 function Inicio() {
+  // guardam as informações da tela
   const usuario = usuarioLogado()
   const [dados, setDados] = useState(null)
   const [resumo, setResumo] = useState(null)
@@ -32,8 +39,10 @@ function Inicio() {
   const [nova, setNova] = useState(TRANSACAO_VAZIA)
   const [editandoId, setEditandoId] = useState(null)
 
+  // busca os dados assim que a tela abre
   useEffect(() => { carregar() }, [])
 
+  // pede ao servidor os cards o resumo e as transações ao mesmo tempo
   async function carregar() {
     try {
       const [resDados, resResumo, resTransacoes] = await Promise.all([
@@ -49,16 +58,20 @@ function Inicio() {
     }
   }
 
+  // salva a transação nova ou a editada
   async function salvarTransacao(e) {
     e.preventDefault()
     const corpo = {
       tipo: nova.tipo,
       descricao: nova.descricao,
+      // troca vírgula por ponto para o servidor entender o número
       valor: String(nova.valor).replace(',', '.'),
       data: nova.data
     }
+    // receita leva a origem e despesa leva a categoria
     if (nova.tipo === 'Receita') corpo.origem = nova.origem
     else corpo.categoria = nova.categoria
+    // se estiver editando manda o id junto e usa PUT senão usa POST
     const url = API + '/api/financeiro/transacoes' + (editandoId ? '/' + editandoId : '')
     try {
       const res = await fetch(url, {
@@ -76,12 +89,14 @@ function Inicio() {
     }
   }
 
+  // abre o formulário vazio
   function abrirNova() {
     setNova(TRANSACAO_VAZIA)
     setEditandoId(null)
     setMostrarForm(true)
   }
 
+  // abre o formulário já preenchido com a transação escolhida
   function editar(t) {
     setNova({
       tipo: t.tipo,
@@ -95,12 +110,14 @@ function Inicio() {
     setMostrarForm(true)
   }
 
+  // fecha e limpa o formulário
   function fecharForm() {
     setNova(TRANSACAO_VAZIA)
     setEditandoId(null)
     setMostrarForm(false)
   }
 
+  // pergunta antes de apagar a transação
   async function excluir(t) {
     if (!window.confirm(`Excluir "${t.descricao}"?`)) return
     try {
@@ -115,15 +132,20 @@ function Inicio() {
     }
   }
 
+  // maior valor dos 6 meses para o tamanho das barras do gráfico
   const maiorMes = resumo ? Math.max(1, ...resumo.ultimosMeses.flatMap(m => [m.receitas, m.despesas])) : 1
 
+  // o que aparece na tela
   return (
     <div className="inicio-conteudo">
+      {/* mostra só o primeiro nome de quem entrou */}
       <h1>Olá, {primeiroNome(usuario?.nome)} 👋</h1>
       <p>Veja como está seu trabalho hoje.</p>
 
+      {/* aviso de sucesso ou de erro */}
       {mensagem && <div className={'in-faixa ' + (mensagem.erro ? 'erro' : 'ok')}>{mensagem.texto}</div>}
 
+      {/* os 4 cards do topo */}
       <div className="indicadores">
         <div className="box_info">
           <span>Receita este mês</span>
@@ -150,6 +172,7 @@ function Inicio() {
         </div>
       </div>
 
+      {/* aviso dos materiais com estoque baixo */}
       {dados && dados.itensAbaixoDoMinimo.length > 0 && (
         <div className="in-faixa erro">
           {dados.itensAbaixoDoMinimo.map(m => (
@@ -165,11 +188,13 @@ function Inicio() {
         <button className="in-botao" onClick={abrirNova}>+ Nova transação</button>
       </div>
 
+      {/* formulário de transação que só aparece quando está aberto */}
       {mostrarForm && (
         <form className="in-card in-form" onSubmit={salvarTransacao}>
           <h5>{editandoId ? 'Editar transação' : 'Nova transação'}</h5>
           <div className="in-grade">
             <label className="in-campo">Tipo
+              {/* na edição o tipo fica travado */}
               <select value={nova.tipo} disabled={editandoId !== null} onChange={e => setNova({ ...nova, tipo: e.target.value })}>
                 <option>Receita</option>
                 <option>Despesa</option>
@@ -184,6 +209,7 @@ function Inicio() {
             <label className="in-campo">Data
               <input type="date" value={nova.data} onChange={e => setNova({ ...nova, data: e.target.value })} />
             </label>
+            {/* receita mostra origem e despesa mostra categoria */}
             {nova.tipo === 'Receita' ? (
               <label className="in-campo">Origem
                 <select value={nova.origem} onChange={e => setNova({ ...nova, origem: e.target.value })}>
@@ -211,6 +237,7 @@ function Inicio() {
         </form>
       )}
 
+      {/* cards de receitas despesas e lucro do mês */}
       <div className="in-mini">
         <div className="in-card">
           <span>Receitas do mês</span>
@@ -222,6 +249,7 @@ function Inicio() {
         </div>
         <div className="in-card">
           <span>Lucro do mês</span>
+          {/* lucro fica vermelho se for negativo */}
           <strong className={resumo && resumo.lucro < 0 ? 'negativo' : 'positivo'}>
             {resumo ? dinheiro(resumo.lucro) : '—'}
           </strong>
@@ -230,11 +258,13 @@ function Inicio() {
 
       <div className="in-duas-colunas">
         <div className="in-card">
+          {/* gráfico de barras dos últimos 6 meses */}
           <h5>Receitas x Despesas · últimos 6 meses</h5>
           <div className="in-grafico">
             {resumo && resumo.ultimosMeses.map(m => (
               <div key={m.rotulo} className="in-grafico-mes">
                 <div className="in-grafico-barras">
+                  {/* a altura da barra é proporcional ao maior valor */}
                   <div className="in-barra receita" style={{ height: (m.receitas / maiorMes) * 100 + '%' }} />
                   <div className="in-barra despesa" style={{ height: (m.despesas / maiorMes) * 100 + '%' }} />
                 </div>
@@ -249,6 +279,7 @@ function Inicio() {
         </div>
 
         <div className="in-card">
+          {/* porcentagem de cada origem da receita */}
           <h5>De onde vem sua receita?</h5>
           {resumo && resumo.porOrigem.map(o => (
             <div key={o.origem} className="in-origem">
@@ -263,6 +294,7 @@ function Inicio() {
       </div>
 
       <div className="in-card">
+        {/* tabela com as 8 transações mais recentes */}
         <h5>Últimas transações</h5>
         <table className="in-tabela">
           <thead>

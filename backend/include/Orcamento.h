@@ -1,4 +1,3 @@
-// David
 #ifndef _ORCAMENTO_H_
 #define _ORCAMENTO_H_
 

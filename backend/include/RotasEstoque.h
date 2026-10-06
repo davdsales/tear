@@ -45,7 +45,7 @@ inline std::string dataDeHoje() {
     return buffer;
 }
 
-// os inputs do React costumam chegar como texto ("15"), entao aceita numero ou texto numerico
+// os inputs do React costumam chegar como texto , entao aceita numero ou texto numerico
 inline double lerNumero(const json& b, const std::string& chave, double padrao = 0.0) {
     if (!b.contains(chave) || b[chave].is_null()) return padrao;
     const json& v = b[chave];
@@ -127,7 +127,7 @@ inline json compraParaJson(const Estoque& estoque, const Compra& c) {
     };
 }
 
-// --- criar e editar materiais ---
+//criar e editar materiais 
 
 // devolve nullptr se o tipo for desconhecido
 inline Material* criarMaterial(const json& b) {
@@ -176,7 +176,7 @@ inline void aplicarEdicao(Material& m, const json& b) {
 inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes) {
     using namespace rotas_estoque;
 
-    // ---------- materiais ----------
+    //materiais
 
     svr.Get("/api/materiais", [&sessoes](const httplib::Request& req, httplib::Response& res) {
         DadosUsuario* d = sessoes.daRequisicao(req);
@@ -238,9 +238,9 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
         responder(res, 200, {{"status", "sucesso"}});
     });
 
-    // ---------- estoque ----------
+    // estoque
 
-    // resumo para a tela inicial (card "Itens com estoque baixo")
+    // resumo para a tela inicial 
     svr.Get("/api/estoque", [&sessoes](const httplib::Request& req, httplib::Response& res) {
         DadosUsuario* d = sessoes.daRequisicao(req);
         if (!d) return semLogin(res);
@@ -260,7 +260,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
         DadosUsuario* d = sessoes.daRequisicao(req);
         if (!d) return semLogin(res);
         Estoque& estoque = d->estoque;
-        // filtro opcional: /api/estoque/movimentacoes?idMaterial=3
+        // filtro
         int filtro = 0;
         if (req.has_param("idMaterial")) {
             try { filtro = std::stoi(req.get_param_value("idMaterial")); } catch (...) { filtro = 0; }
@@ -298,7 +298,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
         }
     });
 
-    // ---------- compras ----------
+    //compras
 
     svr.Get("/api/compras", [&sessoes](const httplib::Request& req, httplib::Response& res) {
         DadosUsuario* d = sessoes.daRequisicao(req);
@@ -310,7 +310,7 @@ inline void registrarRotasEstoque(httplib::Server& svr, SessaoUsuarios& sessoes)
         responder(res, 200, lista);
     });
 
-    // cria a compra com os itens; se "confirmar" for true, ja da entrada no estoque
+    // cria a compra com os itens, se "confirmar" for true, ja da entrada no estoque
     svr.Post("/api/compras", [&sessoes](const httplib::Request& req, httplib::Response& res) {
         DadosUsuario* d = sessoes.daRequisicao(req);
         if (!d) return semLogin(res);

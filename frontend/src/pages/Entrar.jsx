@@ -5,35 +5,47 @@ import "../styles/Entrar.css";
 
 import logo from "../assets/logo.png";
 
+// tela de login para quem já tem conta
 export default function Entrar() {
 
+    // guardam o que a pessoa digita
     const [email, setemail] = useState("");
     const [senha, setsenha] = useState("");
 
+    // serve para mudar de página
     const navigate = useNavigate();
 
+    // roda quando a pessoa clica em entrar
     async function entrar(event) {
 
+        // impede a página de recarregar
         event.preventDefault();
 
         try {
+            // manda email e senha para o servidor em C++ conferir
             const res = await fetch("http://localhost:8080/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, senha })
             });
             const resposta = await res.json();
+
+            // se o email ou a senha estiverem errados mostra o motivo
             if (!res.ok) {
                 alert(resposta.mensagem);
                 return;
             }
+
+            // salva quem entrou e vai para a tela inicial
             guardarLogin(resposta);
             navigate("/inicio");
         } catch {
+            // cai aqui se o servidor estiver desligado
             alert("Não consegui falar com o servidor C++. Ele está rodando?");
         }
     }
 
+    // o que aparece na tela
     return (
         <div className="entrar-container">
 
@@ -47,8 +59,10 @@ export default function Entrar() {
                     <h1>Entrar</h1>
                 </div>
 
+                {/* formulário e quando enviar chama a função entrar */}
                 <form onSubmit={entrar}>
 
+                    {/* cada campo mostra o valor guardado e atualiza quando a pessoa digita */}
                     <div>
                         <label>E-mail</label>
 
@@ -60,6 +74,7 @@ export default function Entrar() {
                         />
                     </div>
 
+                    {/* password esconde o que é digitado */}
                     <div>
                         <label>Senha</label>
 
@@ -77,6 +92,7 @@ export default function Entrar() {
 
                 </form>
 
+                {/* link para criar uma conta nova */}
                 <p>
                     Ainda não possui uma conta?{" "}
                     <a href="/">Criar conta</a>

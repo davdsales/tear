@@ -39,7 +39,7 @@ class BancoDados {
 };
 
 // uma consulta preparada (INSERT, SELECT, UPDATE ou DELETE)
-// os valores entram com "?" no SQL e sao ligados com ligar(), o que evita SQL injection
+// os valores entram com "?" no SQL e sao ligados com ligar(), o que evita fraudes
 // o destrutor libera a consulta sozinho
 class Consulta {
     private:

@@ -5,17 +5,15 @@
 #include "Transacao.h"
 using namespace std;
 
-class Receita : public transacao{
+class Receita : public transacao{ // Herda de transação
     private:
-        string origem; // venda, encomenda, serviço..
+        string origem; // No front com opções venda, encomenda, serviço..
     public:
         Receita(int id, string descricao, double valor, string data, string origem ) : transacao(id, descricao, valor, data), origem(origem){
 
         }
-        double ContribuicaoSaldo() const override {
-            return valor;
-        }
-        string getTipo() const override{
+
+        string getTipo() const override{ //implementa o método virtual da classe mãe
             return "Receita";
         }
         string getOrigem() const {

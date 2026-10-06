@@ -1,4 +1,3 @@
-// Maria Gabriela
 #ifndef _MATERIAL_H_
 #define _MATERIAL_H_
 
@@ -7,76 +6,74 @@
 #include <sstream>
 #include <iomanip>
 
-// numero para mensagens: 600 em vez de 600.000000, e 0.5 em vez de 0.500000
+// deixa o número bonito na mensagem tipo 600 em vez de 600.000000
 inline std::string formatarNumero(double valor) {
     std::ostringstream saida;
     saida << std::fixed << std::setprecision(3) << valor;
     std::string texto = saida.str();
-    texto.erase(texto.find_last_not_of('0') + 1);
-    if (!texto.empty() && texto.back() == '.') texto.pop_back();
+    texto.erase(texto.find_last_not_of('0') + 1);  // tira os zeros que sobram no final
+    if (!texto.empty() && texto.back() == '.') texto.pop_back();  // tira o ponto se ficar sozinho
     return texto;
 }
-// tira o ';' de textos digitados pelo usuario, senao quebra o formato do .txt
+
+// limpa o texto que o usuário digita tirando ponto e vírgula e quebra de linha
 inline std::string limparCampo(std::string texto) {
     texto.erase(std::remove(texto.begin(), texto.end(), ';'), texto.end());
     texto.erase(std::remove(texto.begin(), texto.end(), '\n'), texto.end());
     return texto;
 }
 
-// classe base abstrata: todo material tem os dados em comum,
-// e cada tipo (fio, tecido, aviamento) descreve a si mesmo do seu jeito
+// molde de todo material do estoque
+// fio tecido e aviamento seguem esse molde e cada um se descreve do seu jeito
 class Material {
 protected:
+    // dados que todo material tem e que os filhos também podem usar
     int id;
     std::string nome;
-    std::string unidade;     // g, m, un...
-    double custoUnitario;    // custo por unidade de estoque (ex.: R$ por grama)
-    double estoqueMinimo;
+    std::string unidade;     // jeito de medir como grama metro ou unidade
+    double custoUnitario;    // quanto custa cada unidade
+    double estoqueMinimo;    // abaixo disso aparece o aviso de estoque baixo
 
 public:
+    // cria o material e não deixa custo nem mínimo ficarem negativos
     Material(int id = 0, const std::string& nome = "", const std::string& unidade = "un",
              double custoUnitario = 0.0, double estoqueMinimo = 0.0)
         : id(id), nome(limparCampo(nome)), unidade(limparCampo(unidade)),
           custoUnitario(std::max(0.0, custoUnitario)),
           estoqueMinimo(std::max(0.0, estoqueMinimo)) {}
 
+    // garante que o material seja apagado do jeito certo
     virtual ~Material() {}
 
-    // metodos que cada tipo de material implementa
+    // cada tipo de material é obrigado a escrever esses métodos
     virtual std::string getTipo() const = 0;
     virtual std::string descricao() const = 0;
-    virtual std::string serializarExtras() const = 0;  // campos proprios, separados por ';'
 
-    // getters
+    // pegam os dados
     int getId() const { return id; }
     std::string getNome() const { return nome; }
     std::string getUnidade() const { return unidade; }
     double getCustoUnitario() const { return custoUnitario; }
     double getEstoqueMinimo() const { return estoqueMinimo; }
 
-    // setters
+    // mudam os dados sem deixar texto sujo nem valor negativo
     void setId(int novoId) { id = novoId; }
     void setNome(const std::string& n) { nome = limparCampo(n); }
     void setUnidade(const std::string& u) { unidade = limparCampo(u); }
     void setCustoUnitario(double c) { custoUnitario = std::max(0.0, c); }
     void setEstoqueMinimo(double m) { estoqueMinimo = std::max(0.0, m); }
-
-    // linha do arquivo: tipo;id;nome;unidade;custo;minimo;extras...
-    std::string serializar() const {
-        return getTipo() + ";" + std::to_string(id) + ";" + nome + ";" + unidade + ";" +
-               std::to_string(custoUnitario) + ";" + std::to_string(estoqueMinimo) + ";" +
-               serializarExtras();
-    }
 };
 
-// fio de crochê/tricô
+// fio de crochê e tricô
 class Fio : public Material {
 private:
+    // dados que só o fio tem
     std::string marca;
     std::string cor;
-    double metragem;  // metros por novelo
+    double metragem;  // quantos metros tem um novelo
 
 public:
+    // manda os dados comuns para o molde e guarda os dados do fio
     Fio(int id = 0, const std::string& nome = "", const std::string& unidade = "g",
         double custoUnitario = 0.0, double estoqueMinimo = 0.0,
         const std::string& marca = "", const std::string& cor = "", double metragem = 0.0)
@@ -85,12 +82,9 @@ public:
 
     std::string getTipo() const override { return "FIO"; }
 
+    // como o fio aparece na tela
     std::string descricao() const override {
         return "Fio " + nome + " - " + marca + " (" + cor + ")";
-    }
-
-    std::string serializarExtras() const override {
-        return marca + ";" + cor + ";" + std::to_string(metragem);
     }
 
     std::string getMarca() const { return marca; }
@@ -104,10 +98,12 @@ public:
 // tecidos e feltros
 class Tecido : public Material {
 private:
-    std::string composicao;
-    double largura;  // em cm
+    // dados que só o tecido tem
+    std::string composicao;  // do que o tecido é feito
+    double largura;          // largura em centímetros
 
 public:
+    // manda os dados comuns para o molde e guarda os dados do tecido
     Tecido(int id = 0, const std::string& nome = "", const std::string& unidade = "m",
            double custoUnitario = 0.0, double estoqueMinimo = 0.0,
            const std::string& composicao = "", double largura = 0.0)
@@ -116,12 +112,9 @@ public:
 
     std::string getTipo() const override { return "TECIDO"; }
 
+    // como o tecido aparece na tela
     std::string descricao() const override {
         return "Tecido " + nome + " - " + composicao + " (" + std::to_string((int)largura) + " cm)";
-    }
-
-    std::string serializarExtras() const override {
-        return composicao + ";" + std::to_string(largura);
     }
 
     std::string getComposicao() const { return composicao; }
@@ -130,12 +123,13 @@ public:
     void setLargura(double l) { largura = std::max(0.0, l); }
 };
 
-// olhos, botoes, enchimento, zíperes...
+// olhos botões enchimento e zíperes
 class Aviamento : public Material {
 private:
-    std::string detalhe;  // ex.: "olho de segurança 10mm"
+    std::string detalhe;  // um detalhe a mais tipo olho de segurança 10mm
 
 public:
+    // manda os dados comuns para o molde e guarda o detalhe
     Aviamento(int id = 0, const std::string& nome = "", const std::string& unidade = "un",
               double custoUnitario = 0.0, double estoqueMinimo = 0.0,
               const std::string& detalhe = "")
@@ -144,11 +138,10 @@ public:
 
     std::string getTipo() const override { return "AVIAMENTO"; }
 
+    // como o aviamento aparece na tela e se não tiver detalhe mostra só o nome
     std::string descricao() const override {
         return "Aviamento " + nome + (detalhe.empty() ? "" : " - " + detalhe);
     }
-
-    std::string serializarExtras() const override { return detalhe; }
 
     std::string getDetalhe() const { return detalhe; }
     void setDetalhe(const std::string& d) { detalhe = limparCampo(d); }

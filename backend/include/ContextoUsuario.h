@@ -15,7 +15,7 @@
 #include "GerenciamentoFinanceiro.h"
 #include "Pedido.h"
 
-// tudo o que pertence a uma conta: cada usuario comeca vazio e so ve o que ele mesmo cadastrou
+// tudo o que pertence a uma conta, cada usuario comeca vazio e so ve o que ele mesmo cadastrou
 class DadosUsuario {
 public:
     int usuarioId;
@@ -71,7 +71,7 @@ private:
     }
 };
 
-// descobre quem fez a requisicao (cabecalho X-Usuario-Id que o front manda)
+// descobre quem fez a requisicao 
 // e guarda em memoria os dados de quem ja entrou, para nao ler o banco toda hora
 class SessaoUsuarios {
 private:
