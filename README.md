@@ -6,7 +6,7 @@ Projeto da disciplina de Estruturas de Dados Orientadas a Objetos (EDOO), CIn/UF
 
 - **Back-end:** C++17, com servidor HTTP próprio e banco de dados SQLite
 - **Front-end:** React com Vite
-- **Página do projeto:** https://davdsales.github.io/tear/
+
 
 ---
 
