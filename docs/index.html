@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tear | EDOO 2026.2</title>
+  <meta name="description" content="Tear: aplicação de gestão e precificação para a produção artesanal. Projeto de Estruturas de Dados Orientadas a Objetos (CIn/UFPE), com back-end em C++17, SQLite e interface em React.">
+  <link rel="icon" href="img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --fundo: #FAF6F1;
+      --branco: #FFFFFF;
+      --tinta: #3D3229;
+      --suave: #7A6F63;
+      --linha: #EDE7E0;
+      --destaque: #C1502E;
+      --titulo: 'DM Sans', system-ui, sans-serif;
+      --texto: 'Manrope', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--fundo);
+      color: var(--tinta);
+      font-family: var(--texto);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+    img, video { display: block; max-width: 100%; height: auto; }
+    a { color: var(--destaque); }
+    h1, h2, h3 { font-family: var(--titulo); line-height: 1.2; margin: 0; }
+    p { margin: 0 0 14px; }
+    code {
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+      font-size: .86em; background: var(--linha); padding: .1em .35em; border-radius: 4px;
+    }
+
+    .coluna { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+    .texto { max-width: 760px; margin: 0 auto; }
+
+    /* cabeçalho, no formato das páginas de artigo */
+    .cabecalho { text-align: center; padding-top: 64px; padding-bottom: 28px; }
+    .cabecalho .logo { height: 54px; width: auto; margin: 0 auto 22px; }
+    .cabecalho h1 { font-size: clamp(1.7rem, 4.2vw, 2.6rem); max-width: 800px; margin: 0 auto; }
+    .autores { margin: 22px 0 4px; font-size: 1.08rem; }
+    .autores span { white-space: nowrap; }
+    .instituicao { color: var(--suave); margin: 0; }
+    .disciplina { margin: 4px 0 0; font-weight: 600; }
+
+    .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 24px; }
+    .links a {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 18px; border-radius: 999px;
+      background: var(--tinta); color: #fff; text-decoration: none; font-weight: 600; font-size: .95rem;
+    }
+    .links a:hover { background: var(--destaque); }
+    .links svg { width: 17px; height: 17px; fill: currentColor; }
+
+    /* blocos */
+    section { padding: 40px 0; }
+    section h2 { text-align: center; font-size: 1.65rem; margin-bottom: 18px; }
+    .legenda { text-align: center; color: var(--suave); font-size: .92rem; margin-top: 10px; }
+    .legenda b { color: var(--tinta); }
+
+    .midia { border-radius: 10px; overflow: hidden; border: 1px solid var(--linha); background: var(--branco); }
+
+    .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 24px; margin-top: 8px; }
+    .grade figure { margin: 0; }
+    .grade figcaption { margin-top: 10px; font-size: .95rem; }
+    .grade figcaption b { display: block; font-family: var(--titulo); font-size: 1.02rem; }
+    .grade figcaption span { color: var(--suave); }
+
+    figure.diagrama { margin: 0 0 32px; }
+    figure.diagrama a { display: block; background: var(--branco); border: 1px solid var(--linha); border-radius: 10px; padding: 12px; }
+    figure.diagrama figcaption { text-align: center; color: var(--suave); font-size: .92rem; margin-top: 10px; }
+
+    table { width: 100%; border-collapse: collapse; background: var(--branco); border: 1px solid var(--linha); font-size: .95rem; margin: 6px 0 18px; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+    th { font-family: var(--titulo); background: var(--fundo); }
+    tr:last-child td { border-bottom: 0; }
+
+    ul.conceitos { padding-left: 20px; margin: 0 0 14px; }
+    ul.conceitos li { margin-bottom: 8px; }
+
+    pre {
+      background: #2B241E; color: #EDE4D8; border-radius: 10px; padding: 16px 18px;
+      overflow-x: auto; font-size: .84rem; line-height: 1.6; margin: 0 0 18px;
+    }
+
+    footer { border-top: 1px solid var(--linha); margin-top: 32px; padding: 28px 0 48px; text-align: center; color: var(--suave); font-size: .9rem; }
+
+    @media (max-width: 720px) {
+      .cabecalho { padding-top: 40px; }
+      .grade { grid-template-columns: 1fr; }
+      section { padding: 32px 0; }
+      th, td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+<header class="coluna cabecalho">
+  <img class="logo" src="img/logo.png" alt="Tear">
+  <h1>Tear: sistema de gestão e precificação para a produção artesanal</h1>
+
+  <p class="autores">
+    <span>Maria Gabriela Heleno da Silva</span>,
+    <span>David Everton da Silva Sales</span>,
+    <span>Heloísa Maria Santos Leite</span>,
+    <span>Kailani Yoná da Silva Souza</span>
+  </p>
+  <p class="instituicao">Centro de Informática, Universidade Federal de Pernambuco</p>
+  <p class="disciplina">Estruturas de Dados Orientadas a Objetos, 2026.2</p>
+  <p class="instituicao">Professor: Francisco Paulo Magalhães Simões</p>
+
+  <div class="links">
+    <a href="relatorio-tear.pdf" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm-1 7V3.5L18.5 9H13ZM8 13h8v2H8v-2Zm0 4h8v2H8v-2Z"/></svg>
+      Relatório
+    </a>
+    <a href="https://github.com/davdsales/tear" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      Código
+    </a>
+    <a href="https://youtu.be/5x7CGx-pv1A" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1c.4-1.6.5-4.8.5-4.8s0-3.2-.5-4.8ZM9.7 15.1V8.9L15.3 12l-5.6 3.1Z"/></svg>
+      Vídeo
+    </a>
+  </div>
+</header>
+
+<main class="coluna">
+
+  <section>
+    <div class="midia">
+      <video src="video/demo.mp4" poster="img/demo.jpg" autoplay muted loop playsinline aria-label="Demonstração: login, painel inicial, estoque, compras, orçamento e pedidos"></video>
+    </div>
+    <p class="legenda">Login, painel inicial, estoque, compras, orçamento e quadro de pedidos.</p>
+  </section>
+
+  <section class="texto">
+    <h2>Resumo</h2>
+    <p>O <b>Tear</b> é uma aplicação de gestão e precificação para a produção artesanal, como peças de crochê e amigurumi. O sistema reúne estoque, compras, orçamentos, acompanhamento de pedidos e gestão financeira, com os dados isolados por conta de usuário.</p>
+    <p>As regras de negócio e a persistência ficam em um back-end em C++17, que grava os dados em SQLite. A interface foi feita em React e se comunica com o servidor por HTTP, trocando dados em JSON.</p>
+    <p>Do ponto de vista da disciplina, o objetivo foi aplicar na prática encapsulamento, herança, polimorfismo, abstração e uso de ponteiros e referências, além de operações de CRUD em banco relacional e trabalho em equipe com Git e GitHub.</p>
+  </section>
+
+  <section>
+    <h2>Funcionalidades</h2>
+    <div class="grade">
+      <figure>
+        <div class="midia"><video src="video/estoque.mp4" poster="img/estoque.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Cadastro de materiais</b><span>Fio, tecido e aviamento, cada um com os seus campos próprios.</span></figcaption>
+      </figure>
+      <figure>
+        <div class="midia"><video src="video/movimentacao.mp4" poster="img/movimentacao.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Movimentação de estoque</b><span>O saldo vem da soma das entradas, consumos e ajustes. Não é possível retirar mais do que existe.</span></figcaption>
+      </figure>
+      <figure>
+        <div class="midia"><video src="video/compras.mp4" poster="img/compras.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Compras</b><span>Ao confirmar uma compra, os itens entram no estoque. Uma compra confirmada não pode ser confirmada de novo.</span></figcaption>
+      </figure>
+      <figure>
+        <div class="midia"><video src="video/orcamento.mp4" poster="img/orcamento.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Orçamento</b><span>Soma materiais, mão de obra e adicionais, aplica a margem de lucro e o desconto e mostra o preço final.</span></figcaption>
+      </figure>
+      <figure>
+        <div class="midia"><video src="video/pedidos.mp4" poster="img/pedidos.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Pedidos</b><span>Quadro kanban por etapa. O pedido guarda uma cópia do orçamento, então os valores negociados não mudam depois.</span></figcaption>
+      </figure>
+      <figure>
+        <div class="midia"><video src="video/financeiro.mp4" poster="img/financeiro.jpg" autoplay muted loop playsinline></video></div>
+        <figcaption><b>Financeiro</b><span>Receitas e despesas, faturamento do mês, valor a receber, alerta de estoque baixo e balanço dos últimos seis meses.</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="texto">
+    <h2>Arquitetura</h2>
+    <p>O sistema é dividido em back-end e front-end. A interface envia as ações do usuário por requisições HTTP, o servidor aplica as regras nos objetos correspondentes e devolve o resultado em JSON. Cálculo de saldo, precificação e validações ficam todos no back-end.</p>
+    <p>Todos os dados ficam em um único arquivo SQLite, com oito tabelas criadas pelo próprio código C++ ao iniciar o servidor. Cada linha guarda o <code>usuario_id</code> de quem a criou, e toda consulta é filtrada por ele.</p>
+    <table>
+      <thead><tr><th>Camada</th><th>Tecnologia</th><th>Motivo</th></tr></thead>
+      <tbody>
+        <tr><td>Back-end</td><td>C++17</td><td>Linguagem da disciplina, com foco em orientação a objetos</td></tr>
+        <tr><td>Back-end</td><td>cpp-httplib</td><td>Servidor HTTP e rotas em um único arquivo de cabeçalho</td></tr>
+        <tr><td>Back-end</td><td>nlohmann/json</td><td>Conversão entre objetos C++ e JSON</td></tr>
+        <tr><td>Banco de dados</td><td>SQLite 3</td><td>Banco em arquivo único, compilado junto com o programa</td></tr>
+        <tr><td>Compilação</td><td>CMake</td><td>O mesmo projeto compila no Windows e no Linux</td></tr>
+        <tr><td>Front-end</td><td>React 18, Vite e React Router</td><td>Interface com componentes reutilizáveis</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Diagrama de classes</h2>
+    <p class="texto" style="margin-bottom:24px">O modelo foi dividido em três figuras. Notação UML: <code>-</code> privado, <code>#</code> protegido, <code>+</code> público, <code>= 0</code> método virtual puro; triângulo vazio indica herança, losango cheio indica composição e linha tracejada indica dependência.</p>
+
+    <figure class="diagrama">
+      <a href="img/diagrama-estoque-compras.png" target="_blank"><img src="img/diagrama-estoque-compras.png" alt="Diagrama de classes do módulo de estoque e compras" loading="lazy" width="2046" height="1037"></a>
+      <figcaption><b>Figura 1.</b> Estoque e compras. A classe abstrata Material é especializada em Fio, Tecido e Aviamento.</figcaption>
+    </figure>
+    <figure class="diagrama">
+      <a href="img/diagrama-orcamentos-financeiro.png" target="_blank"><img src="img/diagrama-orcamentos-financeiro.png" alt="Diagrama de classes dos módulos de orçamentos, pedidos e financeiro" loading="lazy" width="2046" height="1092"></a>
+      <figcaption><b>Figura 2.</b> Orçamentos, pedidos e financeiro. A classe abstrata transacao é especializada em Receita e Despesa.</figcaption>
+    </figure>
+    <figure class="diagrama">
+      <a href="img/diagrama-sessao-banco.png" target="_blank"><img src="img/diagrama-sessao-banco.png" alt="Diagrama de classes da sessão de usuário e da camada de persistência" loading="lazy" width="1944" height="1500"></a>
+      <figcaption><b>Figura 3.</b> Sessão de usuário e camada de persistência.</figcaption>
+    </figure>
+  </section>
+
+  <section class="texto">
+    <h2>Orientação a objetos</h2>
+    <ul class="conceitos">
+      <li><b>Encapsulamento:</b> os atributos são <code>private</code> ou <code>protected</code> e só mudam por métodos que validam os dados. Os setters de <code>Orcamento</code>, por exemplo, não aceitam valores negativos.</li>
+      <li><b>Abstração e herança:</b> <code>Material</code> é abstrata e tem as filhas <code>Fio</code>, <code>Tecido</code> e <code>Aviamento</code>. O mesmo acontece com <code>transacao</code>, especializada em <code>Receita</code> e <code>Despesa</code>.</li>
+      <li><b>Polimorfismo por sobrescrita:</b> o estoque guarda os materiais em um <code>std::vector&lt;Material*&gt;</code> e chama <code>descricao()</code> sem saber o tipo de cada um.</li>
+      <li><b>Polimorfismo por sobrecarga:</b> <code>Consulta::ligar()</code> tem uma versão para texto, uma para inteiro e uma para número decimal.</li>
+      <li><b>Ponteiros e referências:</b> <code>buscarPorId()</code> devolve <code>nullptr</code> quando não encontra, e <code>confirmarCompra()</code> recebe o estoque por referência para alterá-lo sem cópia.</li>
+      <li><b>Composição:</b> <code>Compra</code> contém seus itens, <code>Orcamento</code> contém um <code>Cliente</code> e <code>DadosUsuario</code> reúne os módulos de cada conta.</li>
+      <li><b>Construtores e destrutores:</b> <code>BancoDados</code> abre a conexão no construtor e fecha no destrutor. Onde a cópia causaria problema, o construtor de cópia é desabilitado com <code>= delete</code>.</li>
+    </ul>
+<pre>class Material {
+protected:
+    int id;
+    std::string nome;
+    double custoUnitario;
+public:
+    virtual std::string getTipo() const = 0;
+    virtual std::string descricao() const = 0;
+};
+
+class Fio : public Material {
+private:
+    std::string marca, cor;
+    double metragem;
+public:
+    std::string getTipo() const override { return "FIO"; }
+};</pre>
+    <p class="legenda" style="margin-top:-6px">Trecho de <code>backend/include/Material.h</code>.</p>
+  </section>
+
+  <section id="video">
+    <h2>Vídeo</h2>
+    <div class="midia" id="caixa-video">
+      <div style="aspect-ratio:16/9"><iframe style="width:100%;height:100%;border:0;display:block" src="https://www.youtube-nocookie.com/embed/5x7CGx-pv1A" title="Vídeo do Tear" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+    </div>
+    <p class="legenda">Apresentação do projeto, partes do código com orientação a objetos e o sistema rodando.</p>
+  </section>
+
+  <section class="texto">
+    <h2>Equipe</h2>
+    <table>
+      <thead><tr><th>Integrante</th><th>Módulos</th></tr></thead>
+      <tbody>
+        <tr><td>Maria Gabriela</td><td>Estoque e compras</td></tr>
+        <tr><td>David Everton</td><td>Clientes, orçamentos e pedidos (kanban)</td></tr>
+        <tr><td>Heloísa Maria</td><td>Financeiro, painel inicial, contas de usuário e banco de dados</td></tr>
+        <tr><td>Kailani Yoná</td><td>Projetos e produção</td></tr>
+      </tbody>
+    </table>
+    <p>Cada integrante fez a parte em C++ e as telas em React do seu módulo. A integração foi feita por pull requests para a branch <code>develop</code>.</p>
+  </section>
+
+</main>
+
+<footer class="coluna">
+  Tear · Estruturas de Dados Orientadas a Objetos · CIn/UFPE · 2026.2
+</footer>
+</body>
+</html>
